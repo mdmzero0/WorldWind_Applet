@@ -124,14 +124,14 @@ public class CustomSatellite  extends AbstractSatellite
 //        iniMissionTableModel();
 //    }
     
-    public CustomSatellite(String name, Time scenarioEpochDate)
+    public CustomSatellite(String name/*, Time scenarioEpochDate*/)
     {
         this.name = name;
-        iniMissionTableModel(scenarioEpochDate);
+        //iniMissionTableModel(scenarioEpochDate);
     }
     
     // initalizes the mission Table Model
-    private void iniMissionTableModel(Time scenarioEpochDate)
+/*    private void iniMissionTableModel(Time scenarioEpochDate)
     {
         // set names of columns
         Vector<String> tableHeaders = new Vector<String>();
@@ -169,7 +169,7 @@ public class CustomSatellite  extends AbstractSatellite
         //must add stop node
 //        new StopNode(rootNode);
         
-    }
+    }*/
     
     // ================================================================
     // functions that have yet to be fixed =========================
