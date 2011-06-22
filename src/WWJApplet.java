@@ -350,6 +350,8 @@ public class WWJApplet extends JApplet
         ga.getAttributes().setTextAlign(AVKey.CENTER);
         this.labelsLayer.addRenderable(ga);
     }
+    
+    //Added JSatTrak methods/classes
     public void updateTime()
     {
         // save old time
