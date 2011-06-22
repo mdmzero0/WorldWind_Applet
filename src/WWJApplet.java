@@ -15,6 +15,19 @@ import gov.nasa.worldwind.render.GlobeAnnotation;
 import gov.nasa.worldwind.util.StatusBar;
 import gov.nasa.worldwind.view.orbit.*;
 import netscape.javascript.JSObject;
+//Start of JSatTrak imports
+import Bodies.Sun;
+import Utilities.Time;
+import java.util.Hashtable;
+import Satellite.AbstractSatellite;
+import java.text.SimpleDateFormat;
+import java.util.TimeZone;
+import Satellite.JSatTrakTimeDependent;
+import java.util.Vector;
+import javax.swing.Timer;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+import Satellite.CustomSatellite;
 
 import javax.swing.*;
 import java.awt.*;
@@ -32,9 +45,68 @@ public class WWJApplet extends JApplet
 {
     protected WorldWindowGLCanvas wwd;
     protected RenderableLayer labelsLayer;
+    
+    /* Variables being added for the JSatTrak addition to the WorldWind Applet. 
+     * Starting with: Sun and Moon bodies (update: Moon may not be used?)
+     * Also adding: Time
+     * Also adding: Hashtable for satellites
+     */
+    // Sun object
+    private Sun sun;
+    
+    //Time!
+    Time currentJulianDate = new Time(); // current sim or real time (Julian Date)
+    
+    // date formats for displaying and reading in
+    private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss.SSS z");
+    private SimpleDateFormat dateformatShort1 = new SimpleDateFormat("dd MMM y H:m:s.S z");
+    private SimpleDateFormat dateformatShort2 = new SimpleDateFormat("dd MMM y H:m:s z"); // no Milliseconds
+    
+    // scenario epoch time settings
+    private boolean epochTimeEqualsCurrentTime = true; // uses current time for scenario epoch (reset button)
+    private Time scenarioEpochDate = new Time(); // scenario epoch if epochTimeisCurrentTime = false
+    
+    // store local time zone for printing
+    TimeZone localTZ = TimeZone.getDefault();
+    
+    //Scenario Update variables
+    int currentPlayDirection = 0; // 1= forward, -1=backward, =0-no animation step, but can update time (esentially a graphic ini or refresh)
+    private double animationSimStepSeconds = 1.0; // dt in Days per animation step/time update
+    
+    //Animation variables
+    private boolean stopHit = false;
+    private long lastFPSms;
+    private double fpsAnimation;
+    private Timer playTimer;
+    private int realTimeAnimationRefreshRateMs = 1000; // refresh rate for real time animation
+    private int nonRealTimeAnimationRefreshRateMs = 50; // refresh rate for non-real time animation
+    private int animationRefreshRateMs = nonRealTimeAnimationRefreshRateMs; // (current)Milliseconds
+     
+    //Satellites!
+    // hashtable to store all the statelites currently being processed
+    private Hashtable<String,AbstractSatellite> satHash = new Hashtable<String,AbstractSatellite>();
 
+    // time dependent objects that should be update when time is updated -- NEED TO BE SAVED?
+    Vector<JSatTrakTimeDependent> timeDependentObjects = new Vector<JSatTrakTimeDependent>();
+    
     public WWJApplet()
     {
+        // create Sun object
+        sun = new Sun(currentJulianDate.getMJD());
+        
+        // first call to update time to current time:
+        currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
+        
+        // just a little touch up -- remove the milliseconds from the time
+        int mil = currentJulianDate.get(Time.MILLISECOND);
+        currentJulianDate.add(Time.MILLISECOND,1000-mil); // remove the milliseconds (so it shows an even second)
+        
+        // set time string format
+        currentJulianDate.setDateFormat(dateformat);
+        scenarioEpochDate.setDateFormat(dateformat);
+        
+        updateTime(); // update plots
+                
     }
 
     public void init()
@@ -278,5 +350,153 @@ public class WWJApplet extends JApplet
         ga.getAttributes().setTextAlign(AVKey.CENTER);
         this.labelsLayer.addRenderable(ga);
     }
+    public void updateTime()
+    {
+        // save old time
+        double prevJulDate = currentJulianDate.getJulianDate();
+        
+        // Get current simulation time!             
+        /*if(realTimeModeCheckBox.isSelected())
+        {
+            // real time mode -- just use real time
+            
+            // Get current time in GMT
+            // calculate current Juilian Date, update to current time
+            currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate();
+
+        }*/
+        //else
+        {
+            // non-real time mode add fraction of time to current jul date
+            //currentJulianDate += currentPlayDirection*animationSimStepDays;
+            currentJulianDate.addSeconds( currentPlayDirection*animationSimStepSeconds );
+        }
+        
+        // update sun position
+        sun.setCurrentMJD(currentJulianDate.getMJD());
+                
+        // if time jumps by more than 91 minutes check period of sat to see if
+        // ground tracks need to be updated
+        double timeDiffDays = Math.abs(currentJulianDate.getJulianDate()-prevJulDate); // in days
+        checkTimeDiffResetGroundTracks(timeDiffDays);        
+                
+        // update date box:
+        //dateTextField.setText( currentJulianDate.getDateTimeStr() );//String.format("%tc",cal) );
+        
+        // now propogate all satellites to the current time  
+        for (AbstractSatellite sat : satHash.values() )
+        {
+            sat.propogate2JulDate( currentJulianDate.getJulianDate() );
+        } // propgate each sat 
+        
+        // update any other time dependant objects
+        for(JSatTrakTimeDependent tdo : timeDependentObjects)
+        {
+            if(tdo != null)
+            {
+                tdo.updateTime(currentJulianDate, satHash);
+            }
+        }
+                
+        forceRepainting(); // repaint 2d/3d earth
+        
+        
+    } // update time
+ public void checkTimeDiffResetGroundTracks(double timeDiffDays)
+    {
+        if( timeDiffDays > 91.0/1440.0)
+        {
+            // big time jump
+            for (AbstractSatellite sat : satHash.values() )
+            {
+                if(sat.getShowGroundTrack() && (sat.getPeriod() <= (timeDiffDays*24.0*60.0) ) )
+                {
+                    sat.setGroundTrackIni2False();
+                    //System.out.println(sat.getName() +" - Groundtrack Initiated");
+                }
+            }
+        }
+    } // checkTimeDiffResetGroundTracks
+     public void forceRepainting()
+    {
+        /* NEED TO FIX THIS FOR THE APPLET!
+         * // force repainting of all 2D windows
+        for(J2DEarthPanel twoDPanel : twoDWindowVec )
+        {
+            twoDPanel.repaint();
+        }
+        
+        // repaint 3D windows
+        for(J3DEarthPanel threeDPanel : threeDWindowVec )
+        {
+            threeDPanel.repaintWWJ();
+        }
+        for(J3DEarthInternalPanel threeDPanel : threeDInternalWindowVec )
+        {
+            threeDPanel.repaintWWJ();         
+        }
+        */
+    }// forceRepainting
+    public void playScenario()
+    {
+        currentPlayDirection = 1; // forwards
+        runAnimation(); // perform animation
+    } // playScenario
+
+    //NEEDS TO BE FIXED TO RUN WITHOUT ACTION LISTENER
+    private void runAnimation()
+    {
+        lastFPSms = System.currentTimeMillis();
+        playTimer = new Timer(animationRefreshRateMs, new ActionListener()
+        {
+            public void actionPerformed(ActionEvent evt)
+            {
+                // take one time step in the aimation
+                updateTime(); // animate
+                long stopTime = System.currentTimeMillis();
+                
+                fpsAnimation = 1.0 / ((stopTime-lastFPSms)/1000.0); // fps calculation
+                lastFPSms = stopTime;
+                // goal FPS:
+                //fpsAnimation = 1.0 / (animationRefreshRateMs/1000.0);
+                
+                if (stopHit)
+                {
+                    playTimer.stop();                   
+                }
+                // SEG - if update took a long time reduce the timers repeat interval
+                                
+            }
+        });
+    } // runAnimation
+    public void stopAnimation()
+    {
+        stopHit = true; // set flag for next animation step
+    }
+public void addCustomSat(String name)
+    {
+        // if nothing given:
+        if(name == null || name.equalsIgnoreCase(""))
+        {
+            System.out.println("returned");
+            return;
+        }
+        
+        CustomSatellite prop = new CustomSatellite(name,this.getScenarioEpochDate());
+        
+        satHash.put(name, prop);
+
+        // set satellite time to current date
+        prop.propogate2JulDate(this.getCurrentJulTime());
+    }
+    public Time getScenarioEpochDate()
+    {
+        return scenarioEpochDate;
+    }
+        public double getCurrentJulTime()
+    {
+        return currentJulianDate.getJulianDate();
+    }
+    
 }
 

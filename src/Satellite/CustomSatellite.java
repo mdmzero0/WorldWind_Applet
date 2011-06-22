@@ -124,7 +124,7 @@ public class CustomSatellite  extends AbstractSatellite
 //        iniMissionTableModel();
 //    }
     
-    public CustomSatellite(String name/*, Time scenarioEpochDate*/)
+    public CustomSatellite(String name, Time scenarioEpochDate)
     {
         this.name = name;
         //iniMissionTableModel(scenarioEpochDate);
