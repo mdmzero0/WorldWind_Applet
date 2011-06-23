@@ -1,3 +1,4 @@
+package main;
 /*
 Copyright (C) 2001, 2009 United States Government
 as represented by the Administrator of the
@@ -28,6 +29,15 @@ import javax.swing.Timer;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import Satellite.CustomSatellite;
+import Layers.*;
+import gov.nasa.worldwind.examples.sunlight.*;
+import gov.nasa.worldwind.render.*;
+import java.util.ArrayList;
+import gov.nasa.worldwind.event.*;
+import gov.nasa.worldwind.awt.AWTInputHandler;
+import gov.nasa.worldwind.view.BasicView;
+import View.*;
+import gov.nasa.worldwind.view.orbit.BasicOrbitView;
 
 import javax.swing.*;
 import java.awt.*;
@@ -89,6 +99,39 @@ public class WWJApplet extends JApplet
     // time dependent objects that should be update when time is updated -- NEED TO BE SAVED?
     Vector<JSatTrakTimeDependent> timeDependentObjects = new Vector<JSatTrakTimeDependent>();
     
+    //Stuff from J3DEarthPanel
+    ECIRenderableLayer eciLayer; // ECI layer for plotting in ECI coordinates
+    ECEFRenderableLayer ecefLayer; // ECEF layer for plotting in ECEF coordinates
+    EcefTimeDepRenderableLayer timeDepLayer;
+    OrbitModelRenderable orbitModel; // renderable object for plotting
+    ECEFModelRenderable ecefModel;
+    
+    private boolean viewModeECI = true; // view mode - ECI (true) or ECEF (false)
+    StarsLayer starsLayer;
+    
+    // view mode options
+    private boolean modelViewMode = false; // default false
+    private String modelViewString = ""; // to hold name of satellite to view when modelViewMode=true
+    private double modelViewNearClip = 10000; // clipping pland for when in Model View mode
+    private double modelViewFarClip = 5.0E7;
+    private boolean smoothViewChanges = true; // for 3D view smoothing (only is set after model/earth view has been changed -needs to be fixed)
+    // near/far clipping plane distances for 3d windows (can effect render speed and if full orbit is shown)
+     private double farClippingPlaneDistOrbit = -1;//200000000d; // good out to geo, but slow for LEO, using AutoClipping plane view I made works better
+     private double nearClippingPlaneDistOrbit = -1; // -1 value Means auto adjusting
+
+    ViewControlsLayer viewControlsLayer;
+
+    // sun shader
+    private RectangularNormalTessellator tessellator;
+    private LensFlareLayer lensFlareLayer;
+    private AtmosphereLayer atmosphereLayer;
+    private SunPositionProvider spp;
+    private boolean sunShadingOn = false; // controls if sun shading is used
+
+    // ECI grid
+    private ECIRadialGrid eciRadialGrid = new ECIRadialGrid();
+
+    
     public WWJApplet()
     {
         // create Sun object
@@ -111,6 +154,8 @@ public class WWJApplet extends JApplet
 
     public void init()
     {
+        // create Sun object
+        sun = new Sun(currentJulianDate.getMJD());
         try
         {
             // Check for initial configuration values
@@ -133,7 +178,7 @@ public class WWJApplet extends JApplet
             // Create World Window GL Canvas
             this.wwd = new WorldWindowGLCanvas();
             this.getContentPane().add(this.wwd, BorderLayout.CENTER);
-
+            wwd = this.wwd;
             // Create the default model as described in the current worldwind properties.
             Model m = (Model) WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME);
             this.wwd.setModel(m);
@@ -142,7 +187,70 @@ public class WWJApplet extends JApplet
             this.labelsLayer = new RenderableLayer();
             this.labelsLayer.setName("Labels");
             insertBeforeLayerName(this.wwd, this.labelsLayer, "Compass");
+            
+            // add EcefTimeDepRenderableLayer layer
+            timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD(),sun);
+            m.getLayers().add(timeDepLayer);
 
+            // add ECI Layer -- FOR SOME REASON IF BEFORE EFEF and turned off ECEF Orbits don't show up!! Coverage effecting this too, strange
+            eciLayer = new ECIRenderableLayer(currentJulianDate.getMJD()); // create ECI layer
+            orbitModel = new OrbitModelRenderable(satHash, wwd.getModel().getGlobe());
+            eciLayer.addRenderable(orbitModel); // add renderable object
+            eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
+            m.getLayers().add(eciLayer); // add ECI Layer
+            eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
+
+            // add ECEF Layer
+            ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
+            ecefModel = new ECEFModelRenderable(satHash, wwd.getModel().getGlobe());
+            ecefLayer.addRenderable(ecefModel); // add renderable object
+            m.getLayers().add(ecefLayer); // add ECI Layer
+            
+            RenderableLayer latLongLinesLayer = createLatLongLinesLayer();
+            latLongLinesLayer.setName("Lat/Long Lines");
+            latLongLinesLayer.setEnabled(false);
+            //insertBeforeCompass(this.getWwd(), latLongLinesLayer);
+            m.getLayers().add(latLongLinesLayer); // add ECI Layer   
+        
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+
+            // set the sun provider to the shader
+            spp = new CustomSunPositionProvider(sun);
+
+            // Replace sky gradient with this atmosphere layer when using sun shading
+            this.atmosphereLayer = new AtmosphereLayer();
+
+            // Add lens flare layer
+            this.lensFlareLayer = LensFlareLayer.getPresetInstance(LensFlareLayer.PRESET_BOLD);
+            m.getLayers().add(this.lensFlareLayer);
+
+            // Get tessellator
+            this.tessellator = (RectangularNormalTessellator)m.getGlobe().getTessellator();
+            // set default colors for shading
+            this.tessellator.setAmbientColor(new Color(0.50f, 0.50f, 0.50f));
+
+            // Add position listener to update light direction relative to the eye
+            this.wwd.addPositionListener(new PositionListener()
+            {
+                Vec4 eyePoint;
+
+                    public void moved(PositionEvent event)
+                    {
+                        if(eyePoint == null || eyePoint.distanceTo3(wwd.getView().getEyePoint()) > 1000)
+                        {
+                            update(true);
+                            eyePoint = wwd.getView().getEyePoint();
+                        }
+                    }
+            });
+
+            setSunShadingOn(true); // enable sun shading by default
+            // END Sun Shading -------------
+
+            // correct clipping plane -- so entire orbits are shown - maybe make variable?
+            setupView(); // setup needed viewing specs and use of AutoClipBasicOrbitView
+
+            
             // Add the status bar
             StatusBar statusBar = new StatusBar();
             this.getContentPane().add(statusBar, BorderLayout.PAGE_END);
@@ -499,6 +607,221 @@ public void addCustomSat(String name)
     {
         return currentJulianDate.getJulianDate();
     }
-    
+    private RenderableLayer createLatLongLinesLayer()
+    {
+        RenderableLayer shapeLayer = new RenderableLayer();
+
+            // Generate meridians
+            ArrayList<Position> positions = new ArrayList<Position>(3);
+            double height = 30e3; // 10e3 default
+            for (double lon = -180; lon < 180; lon += 10)
+            {
+                Angle longitude = Angle.fromDegrees(lon);
+                positions.clear();
+                positions.add(new Position(Angle.NEG90, longitude, height));
+                positions.add(new Position(Angle.ZERO, longitude, height));
+                positions.add(new Position(Angle.POS90, longitude, height));
+                Polyline polyline = new Polyline(positions);
+                polyline.setFollowTerrain(false);
+                polyline.setNumSubsegments(30);
+                
+                if(lon == -180 || lon == 0)
+                {
+                    polyline.setColor(new Color(1f, 1f, 0f, 0.5f)); // yellow
+                }
+                else
+                {
+                    polyline.setColor(new Color(1f, 1f, 1f, 0.5f));
+                }
+                
+                shapeLayer.addRenderable(polyline);
+            }
+
+            // Generate parallels
+            for (double lat = -80; lat < 90; lat += 10)
+            {
+                Angle latitude = Angle.fromDegrees(lat);
+                positions.clear();
+                positions.add(new Position(latitude, Angle.NEG180, height));
+                positions.add(new Position(latitude, Angle.ZERO, height));
+                positions.add(new Position(latitude, Angle.POS180, height));
+                Polyline polyline = new Polyline(positions);
+                polyline.setPathType(Polyline.LINEAR);
+                polyline.setFollowTerrain(false);
+                polyline.setNumSubsegments(30);
+                
+                if(lat == 0)
+                {
+                    polyline.setColor(new Color(1f, 1f, 0f, 0.5f));
+                }
+                else
+                {
+                    polyline.setColor(new Color(1f, 1f, 1f, 0.5f));
+                }
+                
+                shapeLayer.addRenderable(polyline);
+            }
+
+            return shapeLayer;
+    }
+// Update worldwind wun shading
+    private void update(boolean redraw)
+    {
+        if(sunShadingOn) //this.enableCheckBox.isSelected())
+        {
+            // Compute Sun position according to current date and time
+            LatLon sunPos = spp.getPosition();
+            Vec4 sun = wwd.getModel().getGlobe().computePointFromPosition(new Position(sunPos, 0)).normalize3();
+
+            Vec4 light = sun.getNegative3();
+            this.tessellator.setLightDirection(light);
+            this.lensFlareLayer.setSunDirection(sun);
+            this.atmosphereLayer.setSunDirection(sun);
+
+            // Redraw if needed
+            if(redraw)
+            {
+                wwd.redraw();
+            }
+        } // if sun Shading
+        
+    } // update - for sun shading
+
+    public void setSunShadingOn(boolean useSunShading)
+    {
+        if(useSunShading == sunShadingOn)
+        {
+            return; // nothing to do
+        }
+
+        sunShadingOn = useSunShading;
+
+        if(sunShadingOn)
+        {
+            // enable shading - use special atmosphere
+            for(int i = 0; i < wwd.getModel().getLayers().size(); i++)
+            {
+                Layer l = wwd.getModel().getLayers().get(i);
+                if(l instanceof SkyGradientLayer)
+                {
+                    wwd.getModel().getLayers().set(i, this.atmosphereLayer);
+                }
+            }
+        }
+        else
+        {
+            // disable shading
+            // Turn off lighting
+            this.tessellator.setLightDirection(null);
+            this.lensFlareLayer.setSunDirection(null);
+            this.atmosphereLayer.setSunDirection(null);
+
+            // use standard atmosphere
+            for(int i = 0; i < wwd.getModel().getLayers().size(); i++)
+            {
+                Layer l = wwd.getModel().getLayers().get(i);
+                if(l instanceof AtmosphereLayer)
+                {
+                    wwd.getModel().getLayers().set(i, new SkyGradientLayer());
+                }
+            }
+            
+        } // if/else shading
+
+        this.update(true); // redraw
+    } // setSunShadingOn
+    private void setupView()
+    {
+        if(modelViewMode == false)
+        { // Earth View mode
+            AutoClipBasicOrbitView bov = new AutoClipBasicOrbitView();
+            wwd.setView(bov);
+            
+            // remove the rest of the old input handler  (does this need a remove of hover listener? - maybe it is now completely removed?)
+            wwd.getInputHandler().setEventSource(null);
+            
+            AWTInputHandler awth = new AWTInputHandler();
+            awth.setEventSource(wwd);
+            wwd.setInputHandler(awth);
+            awth.setSmoothViewChanges(smoothViewChanges); // FALSE MAKES THE VIEW FAST!! -- MIGHT WANT TO MAKE IT GUI Chooseable
+                        
+            // IF EARTH VIEW -- RESET CLIPPING PLANES BACK TO NORMAL SETTINGS!!!
+            wwd.getView().setNearClipDistance(this.nearClippingPlaneDistOrbit);
+            wwd.getView().setFarClipDistance(this.farClippingPlaneDistOrbit);
+            
+            // change class for inputHandler
+            Configuration.setValue(AVKey.INPUT_HANDLER_CLASS_NAME, 
+                        AWTInputHandler.class.getName());
+
+            // re-setup control layer handler
+            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
+            
+        } // Earth View mode
+        else
+        { // Model View mode
+            
+            // TEST NEW VIEW -- TO MAKE WORK MUST TURN OFF ECI!
+            this.setViewModeECI(false);
+
+            if(!satHash.containsKey(modelViewString))
+            {
+                System.out.println("NO Current Satellite Selected, can't switch to Model Mode: " + modelViewString);
+                return;
+            }
+
+            AbstractSatellite sat = satHash.get(modelViewString);
+
+            BasicModelView3 bmv;
+            if(wwd.getView() instanceof BasicOrbitView)
+            {
+                bmv = new BasicModelView3(((BasicOrbitView)wwd.getView()).getOrbitViewModel(), sat);
+                //bmv = new BasicModelView3(sat);
+            }
+            else
+            {
+                bmv = new BasicModelView3(((BasicModelView3)wwd.getView()).getOrbitViewModel(), sat);
+            }
+            
+            // remove the old hover listener -- depending on this instance of the input handler class type
+            if( wwd.getInputHandler() instanceof AWTInputHandler)
+            {
+                ((AWTInputHandler) wwd.getInputHandler()).removeHoverSelectListener();
+            }
+            else if( wwd.getInputHandler() instanceof BasicModelViewInputHandler3)
+            {
+                ((BasicModelViewInputHandler3) wwd.getInputHandler()).removeHoverSelectListener();
+            }
+            
+            // set view
+            wwd.setView(bmv);
+
+            // remove the rest of the old input handler
+            wwd.getInputHandler().setEventSource(null);
+             
+            // add new input handler
+            BasicModelViewInputHandler3 mih = new BasicModelViewInputHandler3();
+            mih.setEventSource(wwd);
+            wwd.setInputHandler(mih);
+            
+            // view smooth?
+            mih.setSmoothViewChanges(smoothViewChanges); // FALSE MAKES THE VIEW FAST!!
+
+            // settings for great closeups!
+            wwd.getView().setNearClipDistance(modelViewNearClip);
+            wwd.getView().setFarClipDistance(modelViewFarClip);
+            bmv.setZoom(900000);
+            bmv.setPitch(Angle.fromDegrees(45));
+            
+            // change class for inputHandler
+            Configuration.setValue(AVKey.INPUT_HANDLER_CLASS_NAME, 
+                        BasicModelViewInputHandler3.class.getName());
+
+            // re-setup control layer handler
+            this.getWwd().addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
+            
+        } // model view mode
+        
+    } // setupView
+
 }
 
