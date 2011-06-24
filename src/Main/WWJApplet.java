@@ -39,6 +39,7 @@ import gov.nasa.worldwind.view.BasicView;
 import View.*;
 import gov.nasa.worldwind.view.orbit.BasicOrbitView;
 import gov.nasa.worldwind.view.BasicView;
+import Satellite.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -134,6 +135,10 @@ public class WWJApplet extends JApplet
 
     
     public WWJApplet()
+    {           
+    }
+
+    public void init()
     {
         // create Sun object
         sun = new Sun(currentJulianDate.getMJD());
@@ -149,14 +154,21 @@ public class WWJApplet extends JApplet
         currentJulianDate.setDateFormat(dateformat);
         scenarioEpochDate.setDateFormat(dateformat);
         
+        //Make me a satellite.
+        CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
+        StkEphemerisReader reader = new StkEphemerisReader();
+        String filename = "file:///C:/Documents%20and%20Settings/MMascaro/Desktop/test.e";
+        try
+        {
+              satellite.setEphemeris(reader.readStkEphemeris(filename));
+        }
+        catch(Exception whocares)
+        {//It darn well better work without exceptions.
+            System.out.println("Problem Reading ephemeris file");
+        }
+        satHash.put("Test", satellite);
+        satellite.propogate2JulDate(this.getCurrentJulTime());
         updateTime(); // update plots
-                
-    }
-
-    public void init()
-    {
-        // create Sun object
-        sun = new Sun(currentJulianDate.getMJD());
         try
         {
             // Check for initial configuration values
@@ -276,6 +288,8 @@ public class WWJApplet extends JApplet
         {
             e.printStackTrace();
         }
+        
+
     }
 
     public void start()
@@ -749,7 +763,7 @@ public void addCustomSat(String name)
             // IF EARTH VIEW -- RESET CLIPPING PLANES BACK TO NORMAL SETTINGS!!!
             wwd.getView().setNearClipDistance(this.nearClippingPlaneDistOrbit);
             wwd.getView().setFarClipDistance(this.farClippingPlaneDistOrbit);
-            
+             
             // change class for inputHandler
             Configuration.setValue(AVKey.INPUT_HANDLER_CLASS_NAME, 
                         AWTInputHandler.class.getName());
