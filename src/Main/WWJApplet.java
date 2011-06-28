@@ -817,7 +817,7 @@ public void addCustomSat(String name)
                         BasicModelViewInputHandler3.class.getName());
 
             // re-setup control layer handler
-            this.getWwd().addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
+            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
             
         } // model view mode
         
