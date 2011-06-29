@@ -822,6 +822,23 @@ public void addCustomSat(String name)
         } // model view mode
         
     } // setupView
+    public void setViewModeECI(boolean viewModeECI)
+    {
+        this.viewModeECI = viewModeECI;
+        
+        // take care of which view mode to use
+        if(viewModeECI)
+        {
+            // update stars
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+        }
+        else
+        {
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(0.0)); // reset to normal
+        }
+        
+    }
+
 
 }
 
