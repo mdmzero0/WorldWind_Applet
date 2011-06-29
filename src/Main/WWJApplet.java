@@ -136,8 +136,6 @@ public class WWJApplet extends JApplet
 
     //Reading ephemeris data
     StkEphemerisReader Reader = new StkEphemerisReader();
-    Vector vector;
-    AbstractSatellite s;
     
     public WWJApplet()
     {
@@ -175,18 +173,25 @@ public class WWJApplet extends JApplet
         currentJulianDate.setDateFormat(dateformat);
         scenarioEpochDate.setDateFormat(dateformat);
         
-        addCustomSat("Mike");
-        try {
-            vector = Reader.readStkEphemeris("file:///C:/Documents%20and%20Settings/MMascaro/Desktop/test.e");
-        } catch (Exception ex) {
-            Logger.getLogger(WWJApplet.class.getName()).log(Level.SEVERE, null, ex);
+        CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
+        StkEphemerisReader reader = new StkEphemerisReader();
+        String filename = "file:///C:/Documents%20and%20Settings/MMascaro/Desktop/test.e";
+        try
+        {
+              satellite.setEphemeris(reader.readStkEphemeris(filename));
         }
-        s = satHash.get("Mike");
-        s.setEphemeris(vector);
-        s.setShow3D(true);
-        s.setShowGroundTrack3d(true);
-        s.setShow3DOrbitTrace(true);
-        s.setShow3DName(true);
+        catch(Exception whocares)
+        {//It darn well better work without exceptions.
+            System.out.println("Problem Reading ephemeris file");
+        }
+        
+        satellite.setShow3D(true);
+        satellite.setShowGroundTrack3d(true);
+        satellite.setShow3DOrbitTrace(true);
+        satellite.setShow3DOrbitTraceECI(true);
+        satellite.setShow3DName(true);
+        satellite.propogate2JulDate(this.getCurrentJulTime());
+
         updateTime(); // update plots
         try
         {
