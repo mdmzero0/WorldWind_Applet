@@ -26,6 +26,8 @@ import java.awt.Color;
 import java.io.Serializable;
 //import jsattrak.utilities.TLE;
 import Utilities.WWModel3D_new;
+import java.util.Vector;
+import Utilities.StateVector;
 
 /**
  *
@@ -183,6 +185,6 @@ public abstract class AbstractSatellite implements Serializable
     public abstract double getThreeDModelSizeFactor();
     
     public abstract void setThreeDModelSizeFactor(double modelSizeFactor);
-    
 
+    public abstract void setEphemeris(Vector<StateVector> e);
 }
