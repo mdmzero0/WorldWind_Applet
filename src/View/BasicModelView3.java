@@ -24,7 +24,10 @@ All Rights Reserved.
 package View;
 
 import gov.nasa.worldwind.Configuration;
+import gov.nasa.worldwind.View;
+import gov.nasa.worldwind.animation.Animator;
 import gov.nasa.worldwind.avlist.AVKey;
+import gov.nasa.worldwind.awt.ViewInputHandler;
 import gov.nasa.worldwind.geom.*;
 import gov.nasa.worldwind.globes.Globe;
 import gov.nasa.worldwind.render.DrawContext;
@@ -33,7 +36,7 @@ import gov.nasa.worldwind.util.RestorableSupport;
 
 import gov.nasa.worldwind.view.AbstractView;
 import gov.nasa.worldwind.view.BasicOrbitViewModel;
-import gov.nasa.worldwind.view.orbit.OrbitView;
+import gov.nasa.worldwind.view.OrbitView;
 import gov.nasa.worldwind.view.orbit.*;
 import gov.nasa.worldwind.view.*;
 import gov.nasa.worldwind.view.OrbitViewCollisionSupport;
@@ -1037,5 +1040,70 @@ public class BasicModelView3 extends AbstractView implements OrbitView
     public OrbitViewLimits getOrbitViewLimits()
     {
         return orbitViewLimits;
+    }
+
+    @Override
+    public Angle getRoll() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void setRoll(Angle angle) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public long getViewStateID() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Matrix setReferenceCenter(DrawContext dc, Vec4 vec4) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Vec4 getCenterPoint() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Globe getGlobe() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public ViewInputHandler getViewInputHandler() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void stopAnimations() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void goTo(Position pstn, double d) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean isAnimating() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public ViewPropertyLimits getViewPropertyLimits() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void copyViewState(View view) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void addAnimator(Animator anmtr) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

@@ -817,11 +817,28 @@ public void addCustomSat(String name)
                         BasicModelViewInputHandler3.class.getName());
 
             // re-setup control layer handler
-            this.getWwd().addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
+            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
             
         } // model view mode
         
     } // setupView
+    public void setViewModeECI(boolean viewModeECI)
+    {
+        this.viewModeECI = viewModeECI;
+        
+        // take care of which view mode to use
+        if(viewModeECI)
+        {
+            // update stars
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+        }
+        else
+        {
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(0.0)); // reset to normal
+        }
+        
+    }
+
 
 }
 
