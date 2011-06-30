@@ -15,6 +15,8 @@ import gov.nasa.worldwind.layers.*;
 import gov.nasa.worldwind.render.GlobeAnnotation;
 import gov.nasa.worldwind.util.StatusBar;
 import gov.nasa.worldwind.view.orbit.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import netscape.javascript.JSObject;
 //Start of JSatTrak imports
 import Bodies.Sun;
@@ -38,6 +40,7 @@ import gov.nasa.worldwind.awt.AWTInputHandler;
 import gov.nasa.worldwind.view.BasicView;
 import View.*;
 import gov.nasa.worldwind.view.orbit.BasicOrbitView;
+import Satellite.StkEphemerisReader;
 
 import javax.swing.*;
 import java.awt.*;
@@ -131,6 +134,8 @@ public class WWJApplet extends JApplet
     // ECI grid
     private ECIRadialGrid eciRadialGrid = new ECIRadialGrid();
 
+    //Reading ephemeris data
+    StkEphemerisReader Reader = new StkEphemerisReader();
     
     public WWJApplet()
     {
@@ -156,6 +161,38 @@ public class WWJApplet extends JApplet
     {
         // create Sun object
         sun = new Sun(currentJulianDate.getMJD());
+        
+        // first call to update time to current time:
+        currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
+        
+        // just a little touch up -- remove the milliseconds from the time
+        int mil = currentJulianDate.get(Time.MILLISECOND);
+        currentJulianDate.add(Time.MILLISECOND,1000-mil); // remove the milliseconds (so it shows an even second)
+        
+        // set time string format
+        currentJulianDate.setDateFormat(dateformat);
+        scenarioEpochDate.setDateFormat(dateformat);
+        
+        CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
+        StkEphemerisReader reader = new StkEphemerisReader();
+        String filename = "file:///C:/Documents%20and%20Settings/MMascaro/Desktop/test.e";
+        try
+        {
+              satellite.setEphemeris(reader.readStkEphemeris(filename));
+        }
+        catch(Exception whocares)
+        {//It darn well better work without exceptions.
+            System.out.println("Problem Reading ephemeris file");
+        }
+        
+        satellite.setShow3D(true);
+        satellite.setShowGroundTrack3d(true);
+        satellite.setShow3DOrbitTrace(true);
+        satellite.setShow3DOrbitTraceECI(true);
+        satellite.setShow3DName(true);
+        satellite.propogate2JulDate(this.getCurrentJulTime());
+
+        updateTime(); // update plots
         try
         {
             // Check for initial configuration values
@@ -529,23 +566,7 @@ public class WWJApplet extends JApplet
     } // checkTimeDiffResetGroundTracks
      public void forceRepainting()
     {
-        /* NEED TO FIX THIS FOR THE APPLET!
-         * // force repainting of all 2D windows
-        for(J2DEarthPanel twoDPanel : twoDWindowVec )
-        {
-            twoDPanel.repaint();
-        }
-        
-        // repaint 3D windows
-        for(J3DEarthPanel threeDPanel : threeDWindowVec )
-        {
-            threeDPanel.repaintWWJ();
-        }
-        for(J3DEarthInternalPanel threeDPanel : threeDInternalWindowVec )
-        {
-            threeDPanel.repaintWWJ();         
-        }
-        */
+        wwd.redrawNow();
     }// forceRepainting
     public void playScenario()
     {
