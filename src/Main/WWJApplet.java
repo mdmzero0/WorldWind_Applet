@@ -1,4 +1,4 @@
-package main;
+package Main;
 /*
 Copyright (C) 2001, 2009 United States Government
 as represented by the Administrator of the
