@@ -1,4 +1,4 @@
-package main;
+package Main;
 /*
 Copyright (C) 2001, 2009 United States Government
 as represented by the Administrator of the
@@ -110,7 +110,7 @@ public class WWJApplet extends JApplet
     ECEFModelRenderable ecefModel;
     
     private boolean viewModeECI = true; // view mode - ECI (true) or ECEF (false)
-    StarsLayer starsLayer;
+    StarsLayer starsLayer = new StarsLayer();
     
     // view mode options
     private boolean modelViewMode = false; // default false
@@ -138,61 +138,11 @@ public class WWJApplet extends JApplet
     StkEphemerisReader Reader = new StkEphemerisReader();
     
     public WWJApplet()
-    {
-        // create Sun object
-        sun = new Sun(currentJulianDate.getMJD());
-        
-        // first call to update time to current time:
-        currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
-        
-        // just a little touch up -- remove the milliseconds from the time
-        int mil = currentJulianDate.get(Time.MILLISECOND);
-        currentJulianDate.add(Time.MILLISECOND,1000-mil); // remove the milliseconds (so it shows an even second)
-        
-        // set time string format
-        currentJulianDate.setDateFormat(dateformat);
-        scenarioEpochDate.setDateFormat(dateformat);
-        
-        updateTime(); // update plots
-                
+    {       
     }
 
     public void init()
     {
-        // create Sun object
-        sun = new Sun(currentJulianDate.getMJD());
-        
-        // first call to update time to current time:
-        currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
-        
-        // just a little touch up -- remove the milliseconds from the time
-        int mil = currentJulianDate.get(Time.MILLISECOND);
-        currentJulianDate.add(Time.MILLISECOND,1000-mil); // remove the milliseconds (so it shows an even second)
-        
-        // set time string format
-        currentJulianDate.setDateFormat(dateformat);
-        scenarioEpochDate.setDateFormat(dateformat);
-        
-        CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
-        StkEphemerisReader reader = new StkEphemerisReader();
-        String filename = "file:///C:/Documents%20and%20Settings/MMascaro/Desktop/test.e";
-        try
-        {
-              satellite.setEphemeris(reader.readStkEphemeris(filename));
-        }
-        catch(Exception whocares)
-        {//It darn well better work without exceptions.
-            System.out.println("Problem Reading ephemeris file");
-        }
-        
-        satellite.setShow3D(true);
-        satellite.setShowGroundTrack3d(true);
-        satellite.setShow3DOrbitTrace(true);
-        satellite.setShow3DOrbitTraceECI(true);
-        satellite.setShow3DName(true);
-        satellite.propogate2JulDate(this.getCurrentJulTime());
-
-        updateTime(); // update plots
         try
         {
             // Check for initial configuration values
@@ -215,7 +165,6 @@ public class WWJApplet extends JApplet
             // Create World Window GL Canvas
             this.wwd = new WorldWindowGLCanvas();
             this.getContentPane().add(this.wwd, BorderLayout.CENTER);
-            wwd = this.wwd;
             // Create the default model as described in the current worldwind properties.
             Model m = (Model) WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME);
             this.wwd.setModel(m);
@@ -227,40 +176,84 @@ public class WWJApplet extends JApplet
             
             // add EcefTimeDepRenderableLayer layer
             timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD(),sun);
-            m.getLayers().add(timeDepLayer);
-
+            //m.getLayers().add(timeDepLayer);
+            insertBeforeLayerName(this.wwd,timeDepLayer,"Labels");
+            
             // add ECI Layer -- FOR SOME REASON IF BEFORE EFEF and turned off ECEF Orbits don't show up!! Coverage effecting this too, strange
             eciLayer = new ECIRenderableLayer(currentJulianDate.getMJD()); // create ECI layer
             orbitModel = new OrbitModelRenderable(satHash, wwd.getModel().getGlobe());
             eciLayer.addRenderable(orbitModel); // add renderable object
             eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
-            m.getLayers().add(eciLayer); // add ECI Layer
+            //m.getLayers().add(eciLayer); // add ECI Layer
             eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
-
+            insertBeforeLayerName(this.wwd,eciLayer, "Labels");
+            
             // add ECEF Layer
             ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
             ecefModel = new ECEFModelRenderable(satHash, wwd.getModel().getGlobe());
             ecefLayer.addRenderable(ecefModel); // add renderable object
-            m.getLayers().add(ecefLayer); // add ECI Layer
+            //m.getLayers().add(ecefLayer); // add ECI Layer
+            insertBeforeLayerName(this.wwd,ecefLayer,"Labels");
             
             RenderableLayer latLongLinesLayer = createLatLongLinesLayer();
             latLongLinesLayer.setName("Lat/Long Lines");
             latLongLinesLayer.setEnabled(false);
             //insertBeforeCompass(this.getWwd(), latLongLinesLayer);
-            m.getLayers().add(latLongLinesLayer); // add ECI Layer   
-        
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+            //m.getLayers().add(latLongLinesLayer); // add ECI Layer   
+            insertBeforeLayerName(this.wwd,latLongLinesLayer,"Labels");
+            
 
+
+            // first call to update time to current time:
+            currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
+
+            // just a little touch up -- remove the milliseconds from the time
+            int mil = currentJulianDate.get(Time.MILLISECOND);
+            currentJulianDate.add(Time.MILLISECOND,1000-mil); // remove the milliseconds (so it shows an even second)
+
+            // set time string format
+            currentJulianDate.setDateFormat(dateformat);
+            scenarioEpochDate.setDateFormat(dateformat);
+            
+            // create Sun object
+            sun = new Sun(currentJulianDate.getMJD());
+
+            CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
+            StkEphemerisReader reader = new StkEphemerisReader();
+            String filename = "file:///C:/Documents and Settings/MMascaro/Desktop/WebStart/test_ephem.e";
+            try
+            {
+                  satellite.setEphemeris(reader.readStkEphemeris(filename));
+            }
+            catch(Exception whocares)
+            {//It darn well better work without exceptions.
+                System.out.println("Problem Reading ephemeris file");
+            }
+
+            satellite.setShow3D(true);
+            satellite.setShowGroundTrack3d(true);
+            satellite.setShow3DOrbitTrace(true);
+            satellite.setShow3DOrbitTraceECI(true);
+            satellite.setShow3DName(true);
+            satellite.propogate2JulDate(this.getCurrentJulTime());
+
+            updateTime(); // update plots
+            System.out.print(this.getCurrentJulTime());
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+            insertBeforeLayerName(this.wwd,starsLayer,"Labels");
+            
             // set the sun provider to the shader
             spp = new CustomSunPositionProvider(sun);
 
             // Replace sky gradient with this atmosphere layer when using sun shading
             this.atmosphereLayer = new AtmosphereLayer();
-
+            insertBeforeLayerName(this.wwd,this.atmosphereLayer,"Labels");
+            
             // Add lens flare layer
             this.lensFlareLayer = LensFlareLayer.getPresetInstance(LensFlareLayer.PRESET_BOLD);
-            m.getLayers().add(this.lensFlareLayer);
-
+            //m.getLayers().add(this.lensFlareLayer);
+            insertBeforeLayerName(this.wwd,this.lensFlareLayer,"Labels");
+            
             // Get tessellator
             this.tessellator = (RectangularNormalTessellator)m.getGlobe().getTessellator();
             // set default colors for shading
@@ -286,7 +279,6 @@ public class WWJApplet extends JApplet
 
             // correct clipping plane -- so entire orbits are shown - maybe make variable?
             setupView(); // setup needed viewing specs and use of AutoClipBasicOrbitView
-
             
             // Add the status bar
             StatusBar statusBar = new StatusBar();
