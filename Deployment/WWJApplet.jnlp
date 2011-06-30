@@ -7,11 +7,11 @@
         <homepage href="http://worldwind.arc.nasa.gov"/>
         <description>World Wind Java Applet Demo</description>
         <description kind="short">World Wind Java Applet Demo</description>
-        <offline-allowed/>
     </information>
     <security>
         <all-permissions/>
     </security>
+	
      <resources os="Windows">
        <property name="sun.java2d.noddraw" value="true"/>
      </resources>
@@ -30,7 +30,7 @@
      <!-- Width and height are overwritten by the surrounding web page -->
      <applet-desc
          name="WWJApplet"
-         main-class="WWJApplet"
+         main-class="Main.WWJApplet"
          width="800" height="600">
         <param name="separate_jvm" value="true" />
      </applet-desc>
