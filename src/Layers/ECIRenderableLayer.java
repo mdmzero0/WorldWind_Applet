@@ -157,7 +157,5 @@ public class ECIRenderableLayer extends RenderableLayer
     public double getRotateECIdeg()
     {
         return rotateECIdeg;
-    } //getRotateECIdeg
-    
-    
+    } //getRotateECIdeg    
 }

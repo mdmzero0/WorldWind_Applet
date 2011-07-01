@@ -65,31 +65,31 @@ public class EcefTimeDepRenderableLayer extends RenderableLayer
         return "ECEF Time Dep. Layer";
     }
 
-    @Override
-    public void addRenderable(Renderable renderable)
-    {
-        // set the current time for the object
-        if (renderable instanceof TimeDepRenderable)
-        {
-            ((TimeDepRenderable) renderable).updateMJD(currentMJD);
-        }
-
-        // do the normal adding of the object
-        super.addRenderable(renderable);
-    }
+//    @Override
+//    public void addRenderable(Renderable renderable)
+//    {
+//        // set the current time for the object
+//        if (renderable instanceof TimeDepRenderable)
+//        {
+//            ((TimeDepRenderable) renderable).updateMJD(currentMJD);
+//        }
+//
+//        // do the normal adding of the object
+//        super.addRenderable(renderable);
+//    }
 
     /**
      * addds an object to this layer
      * @param renderable
      */
-    public void addRenderable(TimeDepRenderable renderable)
-    {
-        // set the current time
-        renderable.updateMJD(currentMJD);
-
-        // do the normal adding of the object
-        super.addRenderable(renderable);
-    }
+//    public void addRenderable(TimeDepRenderable renderable)
+//    {
+//        // set the current time
+//        renderable.updateMJD(currentMJD);
+//
+//        // do the normal adding of the object
+//        super.addRenderable(renderable);
+//    }
 
     // SEG added -------------
     /**

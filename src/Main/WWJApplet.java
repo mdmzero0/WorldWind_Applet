@@ -41,6 +41,7 @@ import gov.nasa.worldwind.view.BasicView;
 import View.*;
 import gov.nasa.worldwind.view.orbit.BasicOrbitView;
 import Satellite.StkEphemerisReader;
+import java.util.GregorianCalendar;
 
 import javax.swing.*;
 import java.awt.*;
@@ -76,7 +77,7 @@ public class WWJApplet extends JApplet
     private SimpleDateFormat dateformatShort2 = new SimpleDateFormat("dd MMM y H:m:s z"); // no Milliseconds
     
     // scenario epoch time settings
-    private boolean epochTimeEqualsCurrentTime = true; // uses current time for scenario epoch (reset button)
+    private boolean epochTimeEqualsCurrentTime = false; // uses current time for scenario epoch (reset button)
     private Time scenarioEpochDate = new Time(); // scenario epoch if epochTimeisCurrentTime = false
     
     // store local time zone for printing
@@ -161,6 +162,9 @@ public class WWJApplet extends JApplet
             value = getParameter("InitialPitch");
             if (value != null)
                 Configuration.setValue(AVKey.INITIAL_PITCH, Double.parseDouble(value));
+             // Use normal/shading tessellator
+            // sun shading needs this
+            Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
 
             // Create World Window GL Canvas
             this.wwd = new WorldWindowGLCanvas();
@@ -176,34 +180,44 @@ public class WWJApplet extends JApplet
             
             // add EcefTimeDepRenderableLayer layer
             timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD(),sun);
-            //m.getLayers().add(timeDepLayer);
-            insertBeforeLayerName(this.wwd,timeDepLayer,"Labels");
+            m.getLayers().add(timeDepLayer);
+            //insertBeforeLayerName(this.wwd,timeDepLayer,"Labels");
             
             // add ECI Layer -- FOR SOME REASON IF BEFORE EFEF and turned off ECEF Orbits don't show up!! Coverage effecting this too, strange
             eciLayer = new ECIRenderableLayer(currentJulianDate.getMJD()); // create ECI layer
             orbitModel = new OrbitModelRenderable(satHash, wwd.getModel().getGlobe());
             eciLayer.addRenderable(orbitModel); // add renderable object
             eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
-            //m.getLayers().add(eciLayer); // add ECI Layer
+            m.getLayers().add(eciLayer); // add ECI Layer
             eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
-            insertBeforeLayerName(this.wwd,eciLayer, "Labels");
+            //insertBeforeLayerName(this.wwd,eciLayer, "Labels");
             
             // add ECEF Layer
             ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
             ecefModel = new ECEFModelRenderable(satHash, wwd.getModel().getGlobe());
             ecefLayer.addRenderable(ecefModel); // add renderable object
-            //m.getLayers().add(ecefLayer); // add ECI Layer
-            insertBeforeLayerName(this.wwd,ecefLayer,"Labels");
+            m.getLayers().add(ecefLayer); // add ECI Layer
+            //insertBeforeLayerName(this.wwd,ecefLayer,"Labels");
             
             RenderableLayer latLongLinesLayer = createLatLongLinesLayer();
             latLongLinesLayer.setName("Lat/Long Lines");
             latLongLinesLayer.setEnabled(false);
             //insertBeforeCompass(this.getWwd(), latLongLinesLayer);
-            //m.getLayers().add(latLongLinesLayer); // add ECI Layer   
-            insertBeforeLayerName(this.wwd,latLongLinesLayer,"Labels");
+            m.getLayers().add(latLongLinesLayer); // add ECI Layer   
+            //insertBeforeLayerName(this.wwd,latLongLinesLayer,"Labels");
             
-
-
+            // Add view controls layer and select listener - New in WWJ V0.6
+            viewControlsLayer = new ViewControlsLayer();
+            viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
+            viewControlsLayer.setScale(6/10d);
+            viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
+            viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
+            viewControlsLayer.setEnabled(true); // turn off by default
+            m.getLayers().add(viewControlsLayer);
+            //insertBeforeCompass(wwd, viewControlsLayer);
+            //getLayerPanel().update(wwd);
+            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
+            
             // first call to update time to current time:
             currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
 
@@ -235,8 +249,10 @@ public class WWJApplet extends JApplet
             satellite.setShow3DOrbitTrace(true);
             satellite.setShow3DOrbitTraceECI(true);
             satellite.setShow3DName(true);
+            double time = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
+            setTime(time);
             satellite.propogate2JulDate(this.getCurrentJulTime());
-
+            
             updateTime(); // update plots
             System.out.print(this.getCurrentJulTime());
             starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
@@ -247,12 +263,13 @@ public class WWJApplet extends JApplet
 
             // Replace sky gradient with this atmosphere layer when using sun shading
             this.atmosphereLayer = new AtmosphereLayer();
-            insertBeforeLayerName(this.wwd,this.atmosphereLayer,"Labels");
+            m.getLayers().add(this.atmosphereLayer);
+            //insertBeforeLayerName(this.wwd,this.atmosphereLayer,"Labels");
             
             // Add lens flare layer
             this.lensFlareLayer = LensFlareLayer.getPresetInstance(LensFlareLayer.PRESET_BOLD);
-            //m.getLayers().add(this.lensFlareLayer);
-            insertBeforeLayerName(this.wwd,this.lensFlareLayer,"Labels");
+            m.getLayers().add(this.lensFlareLayer);
+            //insertBeforeLayerName(this.wwd,this.lensFlareLayer,"Labels");
             
             // Get tessellator
             this.tessellator = (RectangularNormalTessellator)m.getGlobe().getTessellator();
@@ -852,6 +869,25 @@ public void addCustomSat(String name)
         
     }
 
-
+        public void setTime(long millisecs)
+    {
+        currentJulianDate.set(millisecs);
+        
+        // update maps ----------------
+        // set animation direction = 0
+        currentPlayDirection = 0;
+        // update graphics
+        updateTime();
+    }
+    
+    /**
+     * Set the current time of the app.
+     * @param julianDate Julian Date
+     */
+    public void setTime(double julianDate)
+    {
+        GregorianCalendar gc = Time.convertJD2Calendar(julianDate);
+        setTime(gc.getTimeInMillis());        
+    }
 }
 
