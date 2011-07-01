@@ -83,7 +83,7 @@ public class OrbitModelRenderable implements Renderable
 
         
         Color transGreen = new Color(0.0f,1.0f,0.0f,circleViewTransparency/255.0f);
-        cone = new Cone(globe, 45, -90, 1000000, 2000000,Angle.fromDegrees(0),Angle.fromDegrees(-90), transGreen);
+        cone = new Cone(globe, 45, -90, 1000000, 2000000, Angle.fromDegrees(0), Angle.fromDegrees(-90), transGreen);
         //Cone(Globe globe, double lat, double lon, double mGroundRange, double mCeiling, Angle orientation, Angle elevation, Color theColor)
     }
     

@@ -161,6 +161,9 @@ public class WWJApplet extends JApplet
             value = getParameter("InitialPitch");
             if (value != null)
                 Configuration.setValue(AVKey.INITIAL_PITCH, Double.parseDouble(value));
+             // Use normal/shading tessellator
+            // sun shading needs this
+            Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
 
             // Create World Window GL Canvas
             this.wwd = new WorldWindowGLCanvas();
@@ -202,6 +205,18 @@ public class WWJApplet extends JApplet
             //m.getLayers().add(latLongLinesLayer); // add ECI Layer   
             insertBeforeLayerName(this.wwd,latLongLinesLayer,"Labels");
             
+            // Add view controls layer and select listener - New in WWJ V0.6
+            viewControlsLayer = new ViewControlsLayer();
+            viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
+            viewControlsLayer.setScale(6/10d);
+            viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
+            viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
+            viewControlsLayer.setEnabled(true); // turn off by default
+            m.getLayers().add(viewControlsLayer);
+            //insertBeforeCompass(wwd, viewControlsLayer);
+            //getLayerPanel().update(wwd);
+            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
+            
 
 
             // first call to update time to current time:
@@ -238,7 +253,6 @@ public class WWJApplet extends JApplet
             satellite.propogate2JulDate(this.getCurrentJulTime());
 
             updateTime(); // update plots
-            System.out.print(this.getCurrentJulTime());
             starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
             insertBeforeLayerName(this.wwd,starsLayer,"Labels");
             
