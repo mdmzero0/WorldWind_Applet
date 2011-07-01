@@ -161,6 +161,8 @@ public class WWJApplet extends JApplet
             value = getParameter("InitialPitch");
             if (value != null)
                 Configuration.setValue(AVKey.INITIAL_PITCH, Double.parseDouble(value));
+            
+              Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
 
             // Create World Window GL Canvas
             this.wwd = new WorldWindowGLCanvas();
@@ -202,6 +204,16 @@ public class WWJApplet extends JApplet
             //m.getLayers().add(latLongLinesLayer); // add ECI Layer   
             insertBeforeLayerName(this.wwd,latLongLinesLayer,"Labels");
             
+ viewControlsLayer = new ViewControlsLayer();
+        viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
+        viewControlsLayer.setScale(6/10d);
+        viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
+        viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
+        viewControlsLayer.setEnabled(true); // turn off by default
+        m.getLayers().add(viewControlsLayer);
+        //insertBeforeCompass(wwd, viewControlsLayer);
+        //getLayerPanel().update(wwd);
+        wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
 
 
             // first call to update time to current time:
@@ -220,7 +232,7 @@ public class WWJApplet extends JApplet
 
             CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
             StkEphemerisReader reader = new StkEphemerisReader();
-            String filename = "file:///C:/Documents and Settings/MMascaro/Desktop/WebStart/test_ephem.e";
+            String filename = "file:///C:/Documents and Settings/SLi/My Documents/WorldWind_Applet/test_ephem.e";
             try
             {
                   satellite.setEphemeris(reader.readStkEphemeris(filename));
