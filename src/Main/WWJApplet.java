@@ -42,6 +42,7 @@ import View.*;
 import gov.nasa.worldwind.view.orbit.BasicOrbitView;
 import Satellite.StkEphemerisReader;
 import java.util.GregorianCalendar;
+import Bodies.Moon;
 
 import javax.swing.*;
 import java.awt.*;
@@ -67,6 +68,7 @@ public class WWJApplet extends JApplet
      */
     // Sun object
     private Sun sun;
+    private Moon moon;
     
     //Time!
     Time currentJulianDate = new Time(); // current sim or real time (Julian Date)
@@ -231,6 +233,9 @@ public class WWJApplet extends JApplet
             
             // create Sun object
             sun = new Sun(currentJulianDate.getMJD());
+            // create Moon object
+            moon = new Moon();
+            moon.MoonPosition(currentJulianDate.getMJD());
 
             CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
             StkEphemerisReader reader = new StkEphemerisReader();
@@ -254,9 +259,11 @@ public class WWJApplet extends JApplet
             satellite.propogate2JulDate(this.getCurrentJulTime());
             
             updateTime(); // update plots
-            System.out.print(this.getCurrentJulTime());
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
-            insertBeforeLayerName(this.wwd,starsLayer,"Labels");
+            System.out.print(this.getCurrentJulTime() + "\n");
+            //FIX FOR TRANSPARENT EARTH PROBLEM: commented out starslayer- necessary?  Not sure yet
+            //starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+            //insertBeforeLayerName(this.wwd,starsLayer,"Labels");
+            //m.getLayers().add(starsLayer);
             
             // set the sun provider to the shader
             spp = new CustomSunPositionProvider(sun);
