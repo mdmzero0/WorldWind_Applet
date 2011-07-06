@@ -194,8 +194,14 @@ public class WWJApplet extends JApplet
             orbitModel = new OrbitModelRenderable(satHash, wwd.getModel().getGlobe());
             eciLayer.addRenderable(orbitModel); // add renderable object
             eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
+           
+            //Grid Part of Code for Applet
+            //Although there is an
+           // eciRadialGrid.setShowGrid(true);
+            //eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
+            
+            
             m.getLayers().add(eciLayer); // add ECI Layer
-            eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
             //insertBeforeLayerName(this.wwd,eciLayer, "Labels");
             
             // add ECEF Layer
@@ -231,7 +237,7 @@ public class WWJApplet extends JApplet
         viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
         viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
         viewControlsLayer.setEnabled(true); // turn off by default
-        m.getLayers().add(viewControlsLayer);
+        m.getLayers().add(1,viewControlsLayer);
         //insertBeforeCompass(wwd, viewControlsLayer);
         //getLayerPanel().update(wwd);
         wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
@@ -278,7 +284,7 @@ public class WWJApplet extends JApplet
             updateTime(); // update plots
             System.out.print(this.getCurrentJulTime() + "\n");
             //FIX FOR TRANSPARENT EARTH PROBLEM: commented out starslayer- necessary?  Not sure yet
-            //starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
             //insertBeforeLayerName(this.wwd,starsLayer,"Labels");
             //m.getLayers().add(starsLayer);
             
@@ -299,6 +305,10 @@ public class WWJApplet extends JApplet
             this.tessellator = (RectangularNormalTessellator)m.getGlobe().getTessellator();
             // set default colors for shading
             this.tessellator.setAmbientColor(new Color(0.50f, 0.50f, 0.50f));
+            
+LayerList WWLayers = m.getLayers();
+String TheLayers = WWLayers.toString();
+System.out.println(TheLayers);
 
             // Add position listener to update light direction relative to the eye
             this.wwd.addPositionListener(new PositionListener()
