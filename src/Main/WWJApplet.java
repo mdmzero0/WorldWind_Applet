@@ -138,10 +138,10 @@ public class WWJApplet extends JApplet
     //Reading ephemeris data
     StkEphemerisReader Reader = new StkEphemerisReader();
     
-    public WWJApplet()
+ /*   public WWJApplet()
     {       
     }
-
+*/
     public void init()
     {
         try
