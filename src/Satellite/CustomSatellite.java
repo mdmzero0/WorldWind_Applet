@@ -57,7 +57,7 @@ public class CustomSatellite  extends AbstractSatellite
     
     
     // table model for the custom config panel and holds all the mission Nodes 
-    private DefaultTreeTableModel missionTableModel = new DefaultTreeTableModel(); // any TreeTableModel
+   // private DefaultTreeTableModel missionTableModel = new DefaultTreeTableModel(); // any TreeTableModel
     
     String name = "Custom Sat";
     
@@ -1055,13 +1055,13 @@ public class CustomSatellite  extends AbstractSatellite
         return timeLag;
     }
 
-    public // array to store ephemeris
+    //public // array to store ephemeris
     //====================================
     // table model for the custom config panel and holds all the mission Nodes
-    DefaultTreeTableModel getMissionTableModel()
-    {
-        return missionTableModel;
-    }
+//    DefaultTreeTableModel getMissionTableModel()
+//    {
+//        return missionTableModel;
+//    }
 
     public Vector<StateVector> getEphemeris()
     {
