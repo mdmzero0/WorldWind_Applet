@@ -140,10 +140,10 @@ public class WWJApplet extends JApplet
     //Reading ephemeris data
     StkEphemerisReader Reader = new StkEphemerisReader();
     
-    public WWJApplet()
+ /*   public WWJApplet()
     {       
     }
-
+*/
     public void init()
     {
         try
@@ -164,9 +164,13 @@ public class WWJApplet extends JApplet
             value = getParameter("InitialPitch");
             if (value != null)
                 Configuration.setValue(AVKey.INITIAL_PITCH, Double.parseDouble(value));
+
+              Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
+
              // Use normal/shading tessellator
             // sun shading needs this
             Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
+
 
             // Create World Window GL Canvas
             this.wwd = new WorldWindowGLCanvas();
@@ -190,8 +194,14 @@ public class WWJApplet extends JApplet
             orbitModel = new OrbitModelRenderable(satHash, wwd.getModel().getGlobe());
             eciLayer.addRenderable(orbitModel); // add renderable object
             eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
+           
+            //Grid Part of Code for Applet
+            //Although there is an
+           // eciRadialGrid.setShowGrid(true);
+            //eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
+            
+            
             m.getLayers().add(eciLayer); // add ECI Layer
-            eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
             //insertBeforeLayerName(this.wwd,eciLayer, "Labels");
             
             // add ECEF Layer
@@ -220,6 +230,19 @@ public class WWJApplet extends JApplet
             //getLayerPanel().update(wwd);
             wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
             
+
+ viewControlsLayer = new ViewControlsLayer();
+        viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
+        viewControlsLayer.setScale(6/10d);
+        viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
+        viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
+        viewControlsLayer.setEnabled(true); // turn off by default
+        m.getLayers().add(1,viewControlsLayer);
+        //insertBeforeCompass(wwd, viewControlsLayer);
+        //getLayerPanel().update(wwd);
+        wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
+
+
             // first call to update time to current time:
             currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
 
@@ -239,7 +262,7 @@ public class WWJApplet extends JApplet
 
             CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
             StkEphemerisReader reader = new StkEphemerisReader();
-            String filename = "file:///C:/Documents and Settings/MMascaro/Desktop/WebStart/test_ephem.e";
+            String filename = "file:///C:/Documents and Settings/SLi/My Documents/WorldWind_Applet/test_ephem.e";
             try
             {
                   satellite.setEphemeris(reader.readStkEphemeris(filename));
@@ -261,7 +284,7 @@ public class WWJApplet extends JApplet
             updateTime(); // update plots
             System.out.print(this.getCurrentJulTime() + "\n");
             //FIX FOR TRANSPARENT EARTH PROBLEM: commented out starslayer- necessary?  Not sure yet
-            //starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
             //insertBeforeLayerName(this.wwd,starsLayer,"Labels");
             //m.getLayers().add(starsLayer);
             
@@ -282,6 +305,10 @@ public class WWJApplet extends JApplet
             this.tessellator = (RectangularNormalTessellator)m.getGlobe().getTessellator();
             // set default colors for shading
             this.tessellator.setAmbientColor(new Color(0.50f, 0.50f, 0.50f));
+            
+LayerList WWLayers = m.getLayers();
+String TheLayers = WWLayers.toString();
+System.out.println(TheLayers);
 
             // Add position listener to update light direction relative to the eye
             this.wwd.addPositionListener(new PositionListener()
