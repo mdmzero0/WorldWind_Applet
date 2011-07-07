@@ -23,7 +23,6 @@ package Layers;
 import gov.nasa.worldwind.layers.RenderableLayer;
 import gov.nasa.worldwind.render.DrawContext;
 import gov.nasa.worldwind.render.Renderable;
-import Layers.OrbitModelRenderable;
 
 /**
  * This layer automatically rotates its collection of renderables so that their 
@@ -32,7 +31,7 @@ import Layers.OrbitModelRenderable;
  *       the renderables added to this collection should plot the ECI coordinates (x,y,z) as ( -x, z, y) 
  *       For example: gl.glVertex3d( -x, z , y);
  *
- * <p><b>!!Precession and Nutation are not yet accouted for.</b>
+ * <p><b>!!Precession and Nutation are not yet accounted for.</b>
  *
  * <p>Shawn E. Gano
  * <br>Created on October 12, 2007 - update May 5 2008
@@ -57,7 +56,7 @@ public class ECIRenderableLayer extends RenderableLayer
     // SEG added -------------
     /**
      * Creates layer with initial time
-     * @param iniMJD inital Modified Julian Date
+     * @param iniMJD initial Modified Julian Date
      */
     public ECIRenderableLayer(double iniMJD)
     {
@@ -94,8 +93,8 @@ public class ECIRenderableLayer extends RenderableLayer
        gl.glMatrixMode(javax.media.opengl.GL.GL_MODELVIEW); // add to prevent interatction with star layer // MUST INCLUDE THIS -- 5 May 2008 SEG
         
         gl.glPushMatrix();   // push for ECI roation
-        gl.glRotated(-rotateECIdeg, 0.0, 1.0, 0.0); // rotate about Earth's spin axis (z-coordinate in J2K, y-coordinate in JOGL)
-         
+        gl.glRotated(-rotateECIdeg, 0.0, 1.0, 0.0); // rotate about Earth's spin axis (z-coordinate in J2K, y-coordinate in JOGL)  
+        
         for (Renderable renderable : super.getRenderables())
         {
             // If the caller has specified their own Iterable,
@@ -140,7 +139,7 @@ public class ECIRenderableLayer extends RenderableLayer
         // now calculate the mean sidereal time at Greenwich (UT time) in degrees
         rotateECIdeg =  ( (280.46061837 + 360.98564736629*(currentMJD-51544.5)) + 0.000387933*T*T - T*T*T/38710000.0 +offsetRotdeg) % 360.0;
         
-        //System.out.println("Rotat:" + rotateECIdeg);
+        //System.out.println("Rotate:" + rotateECIdeg);
         
         // set ECI angle to all OrbitModelRenderables
          for (Renderable renderable : super.getRenderables())

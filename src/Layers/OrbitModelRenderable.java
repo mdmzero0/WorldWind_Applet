@@ -113,7 +113,6 @@ public class OrbitModelRenderable implements Renderable
             // set color
             Color satColor = sat.getSatColor();
             gl.glColor3f( satColor.getRed()/255.0f , satColor.getGreen()/255.0f , satColor.getBlue()/255.0f ); // COLOR
-            
             Double nanDbl = new Double(Double.NaN);
             
             if (sat.isShow3DOrbitTrace() && sat.isShow3DOrbitTraceECI())

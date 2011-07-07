@@ -32,8 +32,6 @@ import gov.nasa.worldwind.render.DrawContext;
 import gov.nasa.worldwind.render.Renderable;
 import javax.media.opengl.GL;
 import Satellite.AbstractSatellite;
-import Utilities.AstroConst;
-import Utilities.MathUtils;
 import Layers.ECIRenderableLayer;
 import net.java.joglutils.model.examples.DisplayListRenderer;
 import net.java.joglutils.model.geometry.Model;
