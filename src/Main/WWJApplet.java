@@ -47,6 +47,9 @@ import Bodies.Moon;
 import javax.swing.*;
 import java.awt.*;
 
+import gov.nasa.worldwind.layers.placename.*;
+import gov.nasa.worldwind.layers.Earth.*;
+
 /**
  * Provides a base application framework for simple WorldWind applets.
  * <p/>
@@ -204,6 +207,10 @@ public class WWJApplet extends JApplet
             eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
             m.getLayers().add(0,eciLayer); // add ECI Layer
             //insertBeforeLayerName(this.wwd,eciLayer, "Labels");
+            
+            CountryBoundariesLayer country = new CountryBoundariesLayer();
+            country.setEnabled(false);
+            m.getLayers().add(country); 
             
             // add ECEF Layer
             ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
