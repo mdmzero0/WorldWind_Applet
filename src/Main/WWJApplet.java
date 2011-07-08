@@ -47,6 +47,9 @@ import Bodies.Moon;
 import javax.swing.*;
 import java.awt.*;
 
+import gov.nasa.worldwind.layers.placename.*;
+import gov.nasa.worldwind.layers.Earth.*;
+
 /**
  * Provides a base application framework for simple WorldWind applets.
  * <p/>
@@ -179,6 +182,8 @@ public class WWJApplet extends JApplet
             Model m = (Model) WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME);
             this.wwd.setModel(m);
 
+            m.getLayers().remove(0);
+            
             // Add a renderable layer for application labels
             this.labelsLayer = new RenderableLayer();
             this.labelsLayer.setName("Labels");
@@ -195,19 +200,23 @@ public class WWJApplet extends JApplet
             eciLayer.addRenderable(orbitModel); // add renderable object
             eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
            
+            
             //Grid Part of Code for Applet
-            //Although there is an
-           // eciRadialGrid.setShowGrid(true);
-            //eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
-            
-            
-            m.getLayers().add(eciLayer); // add ECI Layer
+            //Although there is an error
+            eciRadialGrid.setShowGrid(true);
+            eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
+            m.getLayers().add(0,eciLayer); // add ECI Layer
             //insertBeforeLayerName(this.wwd,eciLayer, "Labels");
+            
+            CountryBoundariesLayer country = new CountryBoundariesLayer();
+            country.setEnabled(false);
+            m.getLayers().add(country); 
             
             // add ECEF Layer
             ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
             ecefModel = new ECEFModelRenderable(satHash, wwd.getModel().getGlobe());
             ecefLayer.addRenderable(ecefModel); // add renderable object
+            ecefLayer.setEnabled(false);
             m.getLayers().add(ecefLayer); // add ECI Layer
             //insertBeforeLayerName(this.wwd,ecefLayer,"Labels");
             
@@ -218,7 +227,7 @@ public class WWJApplet extends JApplet
             m.getLayers().add(latLongLinesLayer); // add ECI Layer   
             //insertBeforeLayerName(this.wwd,latLongLinesLayer,"Labels");
             
-            // Add view controls layer and select listener - New in WWJ V0.6
+/*            // Add view controls layer and select listener - New in WWJ V0.6
             viewControlsLayer = new ViewControlsLayer();
             viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
             viewControlsLayer.setScale(6/10d);
@@ -228,19 +237,19 @@ public class WWJApplet extends JApplet
             m.getLayers().add(viewControlsLayer);
             //insertBeforeCompass(wwd, viewControlsLayer);
             //getLayerPanel().update(wwd);
-            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
+            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));*/
             
 
- viewControlsLayer = new ViewControlsLayer();
-        viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
-        viewControlsLayer.setScale(6/10d);
-        viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
-        viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
-        viewControlsLayer.setEnabled(true); // turn off by default
-        m.getLayers().add(1,viewControlsLayer);
-        //insertBeforeCompass(wwd, viewControlsLayer);
-        //getLayerPanel().update(wwd);
-        wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
+            viewControlsLayer = new ViewControlsLayer();
+            viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
+            viewControlsLayer.setScale(6/10d);
+            viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
+            viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
+            viewControlsLayer.setEnabled(true); // turn off by default
+            m.getLayers().add(1,viewControlsLayer);
+            //insertBeforeCompass(wwd, viewControlsLayer);
+            //getLayerPanel().update(wwd);
+            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
 
 
             // first call to update time to current time:
@@ -258,11 +267,11 @@ public class WWJApplet extends JApplet
             sun = new Sun(currentJulianDate.getMJD());
             // create Moon object
             moon = new Moon();
-            moon.MoonPosition(currentJulianDate.getMJD());
+            Moon.MoonPosition(currentJulianDate.getMJD());
 
             CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
             StkEphemerisReader reader = new StkEphemerisReader();
-            String filename = "file:///C:/Documents and Settings/SLi/My Documents/WorldWind_Applet/test_ephem.e";
+            String filename = "file:///C:/Documents and Settings/MMascaro/Desktop/WorldWind_Applet/test_ephem.e";
             try
             {
                   satellite.setEphemeris(reader.readStkEphemeris(filename));
@@ -277,23 +286,27 @@ public class WWJApplet extends JApplet
             satellite.setShow3DOrbitTrace(true);
             satellite.setShow3DOrbitTraceECI(true);
             satellite.setShow3DName(true);
+            satellite.setShow3DFootprint(false);
+            satellite.setPlot2DFootPrint(false);
             double time = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
             setTime(time);
             satellite.propogate2JulDate(this.getCurrentJulTime());
+            satHash.put("Test", satellite);
             
             updateTime(); // update plots
             System.out.print(this.getCurrentJulTime() + "\n");
+            
             //FIX FOR TRANSPARENT EARTH PROBLEM: commented out starslayer- necessary?  Not sure yet
             starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
-            //insertBeforeLayerName(this.wwd,starsLayer,"Labels");
-            //m.getLayers().add(starsLayer);
+            //insertBeforeLayerName(this.wwd,starsLayer,"View Controls");
+            m.getLayers().add(0,starsLayer);
             
             // set the sun provider to the shader
             spp = new CustomSunPositionProvider(sun);
 
             // Replace sky gradient with this atmosphere layer when using sun shading
-            this.atmosphereLayer = new AtmosphereLayer();
-            m.getLayers().add(this.atmosphereLayer);
+            //this.atmosphereLayer = new AtmosphereLayer();
+            //m.getLayers().add(this.atmosphereLayer);
             //insertBeforeLayerName(this.wwd,this.atmosphereLayer,"Labels");
             
             // Add lens flare layer
@@ -306,10 +319,13 @@ public class WWJApplet extends JApplet
             // set default colors for shading
             this.tessellator.setAmbientColor(new Color(0.50f, 0.50f, 0.50f));
             
-LayerList WWLayers = m.getLayers();
-String TheLayers = WWLayers.toString();
-System.out.println(TheLayers);
-
+            LayerList WWLayers = m.getLayers();
+            String TheLayers = WWLayers.toString();
+            System.out.println(TheLayers);
+            
+            
+            
+            
             // Add position listener to update light direction relative to the eye
             this.wwd.addPositionListener(new PositionListener()
             {
@@ -609,7 +625,7 @@ System.out.println(TheLayers);
     } // checkTimeDiffResetGroundTracks
      public void forceRepainting()
     {
-        wwd.redrawNow();
+        wwd.redraw();
     }// forceRepainting
     public void playScenario()
     {
@@ -740,8 +756,7 @@ public void addCustomSat(String name)
             Vec4 light = sun.getNegative3();
             this.tessellator.setLightDirection(light);
             this.lensFlareLayer.setSunDirection(sun);
-            this.atmosphereLayer.setSunDirection(sun);
-
+//            this.atmosphereLayer.setSunDirection(sun);
             // Redraw if needed
             if(redraw)
             {
@@ -768,7 +783,7 @@ public void addCustomSat(String name)
                 Layer l = wwd.getModel().getLayers().get(i);
                 if(l instanceof SkyGradientLayer)
                 {
-                    wwd.getModel().getLayers().set(i, this.atmosphereLayer);
+//                    wwd.getModel().getLayers().set(i, this.atmosphereLayer);
                 }
             }
         }
