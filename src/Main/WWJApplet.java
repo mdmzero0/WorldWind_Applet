@@ -19,18 +19,16 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import netscape.javascript.JSObject;
 //Start of JSatTrak imports
-import Bodies.Sun;
+import Bodies.*;
 import Utilities.Time;
 import java.util.Hashtable;
-import Satellite.AbstractSatellite;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
-import Satellite.JSatTrakTimeDependent;
+import Satellite.*;
 import java.util.Vector;
 import javax.swing.Timer;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import Satellite.CustomSatellite;
 import Layers.*;
 import gov.nasa.worldwind.examples.sunlight.*;
 import gov.nasa.worldwind.render.*;
@@ -40,9 +38,7 @@ import gov.nasa.worldwind.awt.AWTInputHandler;
 import gov.nasa.worldwind.view.BasicView;
 import View.*;
 import gov.nasa.worldwind.view.orbit.BasicOrbitView;
-import Satellite.StkEphemerisReader;
 import java.util.GregorianCalendar;
-import Bodies.Moon;
 
 import javax.swing.*;
 import java.awt.*;
@@ -143,10 +139,10 @@ public class WWJApplet extends JApplet
     //Reading ephemeris data
     StkEphemerisReader Reader = new StkEphemerisReader();
     
- /*   public WWJApplet()
+    public WWJApplet()
     {       
     }
-*/
+
     public void init()
     {
         try
@@ -192,25 +188,29 @@ public class WWJApplet extends JApplet
             // add EcefTimeDepRenderableLayer layer
             timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD(),sun);
             m.getLayers().add(timeDepLayer);
-            //insertBeforeLayerName(this.wwd,timeDepLayer,"Labels");
+            //insertBeforeLayerName(this.wwd,timeDepLayer,"Labels");*/
+            
             
             // add ECI Layer -- FOR SOME REASON IF BEFORE EFEF and turned off ECEF Orbits don't show up!! Coverage effecting this too, strange
             eciLayer = new ECIRenderableLayer(currentJulianDate.getMJD()); // create ECI layer
             orbitModel = new OrbitModelRenderable(satHash, wwd.getModel().getGlobe());
             eciLayer.addRenderable(orbitModel); // add renderable object
             eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
-           
             
             //Grid Part of Code for Applet
             //Although there is an error
             eciRadialGrid.setShowGrid(true);
             eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
-            m.getLayers().add(0,eciLayer); // add ECI Layer
+            m.getLayers().add(0, eciLayer); // add ECI Layer
             //insertBeforeLayerName(this.wwd,eciLayer, "Labels");
             
             CountryBoundariesLayer country = new CountryBoundariesLayer();
             country.setEnabled(false);
             m.getLayers().add(country); 
+         
+//            PlaceNameServiceSet set = new PlaceNameServiceSet();
+//            PlaceNameLayer places = new PlaceNameLayer(set);
+//            m.getLayers().add(places);
             
             // add ECEF Layer
             ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
@@ -246,11 +246,13 @@ public class WWJApplet extends JApplet
             viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
             viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
             viewControlsLayer.setEnabled(true); // turn off by default
+            viewControlsLayer.setShowVeControls(false);
             m.getLayers().add(1,viewControlsLayer);
             //insertBeforeCompass(wwd, viewControlsLayer);
             //getLayerPanel().update(wwd);
             wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
 
+            
 
             // first call to update time to current time:
             currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
@@ -265,13 +267,14 @@ public class WWJApplet extends JApplet
             
             // create Sun object
             sun = new Sun(currentJulianDate.getMJD());
-            // create Moon object
-            moon = new Moon();
-            Moon.MoonPosition(currentJulianDate.getMJD());
+//            // create Moon object
+//            moon = new Moon();
+//            Moon.MoonPosition(currentJulianDate.getMJD());
 
             CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
             StkEphemerisReader reader = new StkEphemerisReader();
-            String filename = "file:///C:/Documents and Settings/MMascaro/Desktop/WorldWind_Applet/test_ephem.e";
+            //String filename = "file:///C:/Documents and Settings/MMascaro/Desktop/WorldWind_Applet/test_ephem.e";
+            String filename = "http://localhost:8080/test_ephem.e";
             try
             {
                   satellite.setEphemeris(reader.readStkEphemeris(filename));
@@ -281,22 +284,23 @@ public class WWJApplet extends JApplet
                 System.out.println("Problem Reading ephemeris file");
             }
 
-            satellite.setShow3D(true);
-            satellite.setShowGroundTrack3d(true);
-            satellite.setShow3DOrbitTrace(true);
-            satellite.setShow3DOrbitTraceECI(true);
-            satellite.setShow3DName(true);
+//            satellite.setShow3D(true);
+//            satellite.setShowGroundTrack3d(false);
+//            satellite.setShow3DOrbitTrace(true);
+//            satellite.setShow3DOrbitTraceECI(true);
+//            satellite.setShow3DName(true);
             satellite.setShow3DFootprint(false);
-            satellite.setPlot2DFootPrint(false);
+//            satellite.setPlot2DFootPrint(false);
             double time = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
             setTime(time);
             satellite.propogate2JulDate(this.getCurrentJulTime());
             satHash.put("Test", satellite);
             
+            
             updateTime(); // update plots
             System.out.print(this.getCurrentJulTime() + "\n");
             
-            //FIX FOR TRANSPARENT EARTH PROBLEM: commented out starslayer- necessary?  Not sure yet
+            //FIX FOR TRANSPARENT EARTH PROBLEM: Remove old star layer and add new star layer.
             starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
             //insertBeforeLayerName(this.wwd,starsLayer,"View Controls");
             m.getLayers().add(0,starsLayer);
@@ -304,6 +308,7 @@ public class WWJApplet extends JApplet
             // set the sun provider to the shader
             spp = new CustomSunPositionProvider(sun);
 
+            //ALREADY HAVE AN ATMOSPHERE LAYER
             // Replace sky gradient with this atmosphere layer when using sun shading
             //this.atmosphereLayer = new AtmosphereLayer();
             //m.getLayers().add(this.atmosphereLayer);
@@ -579,7 +584,7 @@ public class WWJApplet extends JApplet
         }
         
         // update sun position
-        sun.setCurrentMJD(currentJulianDate.getMJD());
+//        sun.setCurrentMJD(currentJulianDate.getMJD());
                 
         // if time jumps by more than 91 minutes check period of sat to see if
         // ground tracks need to be updated
@@ -756,7 +761,8 @@ public void addCustomSat(String name)
             Vec4 light = sun.getNegative3();
             this.tessellator.setLightDirection(light);
             this.lensFlareLayer.setSunDirection(sun);
-//            this.atmosphereLayer.setSunDirection(sun);
+            //Already an atmosphere layer!
+            //this.atmosphereLayer.setSunDirection(sun);
             // Redraw if needed
             if(redraw)
             {
@@ -826,7 +832,7 @@ public void addCustomSat(String name)
                         
             // IF EARTH VIEW -- RESET CLIPPING PLANES BACK TO NORMAL SETTINGS!!!
             wwd.getView().setNearClipDistance(this.nearClippingPlaneDistOrbit);
-            wwd.getView().setFarClipDistance(this.farClippingPlaneDistOrbit);
+            wwd.getView().setFarClipDistance(100000000000000.0);
             
             // change class for inputHandler
             Configuration.setValue(AVKey.INPUT_HANDLER_CLASS_NAME, 
