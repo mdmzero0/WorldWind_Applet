@@ -36,7 +36,7 @@ public class AutoClipBasicOrbitView extends BasicOrbitView
     private float autoFarClipFactor = 200.0f;
 
 
-//    @Override
+    @Override
     public double getAutoNearClipDistance()
     {
         Position eyePos = getCurrentEyePosition();
@@ -48,7 +48,7 @@ public class AutoClipBasicOrbitView extends BasicOrbitView
         return near/4.0;
     }
 
-//    @Override
+    @Override
     public double getAutoFarClipDistance()
     {
         Position eyePos = getCurrentEyePosition();
