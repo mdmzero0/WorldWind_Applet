@@ -328,8 +328,9 @@ public class WWJApplet extends JApplet
             String TheLayers = WWLayers.toString();
             System.out.println(TheLayers);
             
-            
-            
+            //Visualization Tests
+            m.setShowWireframeExterior(true);
+            m.setShowWireframeInterior(true);
             
             // Add position listener to update light direction relative to the eye
             this.wwd.addPositionListener(new PositionListener()
@@ -832,7 +833,7 @@ public void addCustomSat(String name)
                         
             // IF EARTH VIEW -- RESET CLIPPING PLANES BACK TO NORMAL SETTINGS!!!
             wwd.getView().setNearClipDistance(this.nearClippingPlaneDistOrbit);
-            wwd.getView().setFarClipDistance(100000000000000.0);
+            wwd.getView().setFarClipDistance(this.farClippingPlaneDistOrbit);
             
             // change class for inputHandler
             Configuration.setValue(AVKey.INPUT_HANDLER_CLASS_NAME, 
@@ -945,4 +946,3 @@ public void addCustomSat(String name)
         setTime(gc.getTimeInMillis());        
     }
 }
-

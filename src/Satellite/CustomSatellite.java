@@ -39,7 +39,6 @@ import Utilities.Time;
 import Utilities.LagrangeInterp;
 //import name.gano.swingx.treetable.CustomTreeTableNode;
 import Utilities.J2kCoordinateConversion;
-import Utilities.WWModel3D_new;
 import net.java.joglutils.model.ModelFactory;
 import org.jdesktop.swingx.treetable.DefaultTreeTableModel;
 
