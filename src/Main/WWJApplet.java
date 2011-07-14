@@ -434,8 +434,8 @@ public class WWJApplet extends JApplet
             } // for layers
             
             //Visualization Tests
-            m.setShowWireframeExterior(true);
-            m.setShowWireframeInterior(true);
+//            m.setShowWireframeExterior(true);
+//            m.setShowWireframeInterior(true);
             
             // Add position listener to update light direction relative to the eye
             this.wwd.addPositionListener(new PositionListener()
