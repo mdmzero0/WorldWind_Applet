@@ -143,6 +143,7 @@ public class WWJApplet extends JApplet implements ActionListener
     
     //Button
     JToggleButton playScenario;
+    private boolean play = true;
     
     public WWJApplet()
     {       
@@ -1043,43 +1044,29 @@ public void addCustomSat(String name)
                 });
         playTimer.start();
         
-//        int i = 0;
-//        while(date < maxTime)
-//        {
-//            currentJulianDate.addSeconds(animationSimStepSeconds);
-//            date = this.getCurrentJulTime();
-//            
-//            updateTime();
-//            i++;
-//        }
-        System.out.println("All done ");
-        System.out.println(this.getCurrentJulTime());
-        b = false;
-        }
-        
-//        lastFPSms = System.currentTimeMillis();
-//        playTimer = new Timer(animationRefreshRateMs, new ActionListener()
-//        {
-//            public void actionPerformed(ActionEvent evt)
-//            {
-//                // take one time step in the aimation
-//                updateTime(); // animate
-//                long stopTime = System.currentTimeMillis();
-//                
-//                fpsAnimation = 1.0 / ((stopTime-lastFPSms)/1000.0); // fps calculation
-//                lastFPSms = stopTime;
-//                // goal FPS:
-//                //fpsAnimation = 1.0 / (animationRefreshRateMs/1000.0);
-//                
-//                // SEG - if update took a long time reduce the timers repeat interval
-//                                
-//            }
-//        });
+//        System.out.println("All done ");
+//        System.out.println(this.getCurrentJulTime());
     }
+        else
+        {
+    playTimer.stop();
+    }}
+    
     @Override
 public void actionPerformed(ActionEvent e)
 {
-    animateApplet(true);
+    if(play)
+    {
+        playScenario.setText("Pause");
+        animateApplet(true);
+        play = false;
+    }
+    else
+    {
+        playScenario.setText("Play");
+        animateApplet(false);
+        play = true;
+    }
 }
 
 public double getCurrentJulianTime()
@@ -1095,7 +1082,7 @@ public void WWsetMJD(double mjd)
 //            // seems to work after you click off globe after messing with it
 //            // this fixes the problem:
 //            wwd.getView().stopStateIterators();
-//            wwd.getView().stopMovement(); //seems to fix prop in v0.5
+            wwd.getView().stopMovement(); //seems to fix prop in v0.5
 //            
 //            // update rotation of view and Stars
             double theta0 = eciLayer.getRotateECIdeg();
