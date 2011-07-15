@@ -173,7 +173,6 @@ public class WWJApplet extends JApplet
             // sun shading needs this
             Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
 
-
             // Create World Window GL Canvas
             this.wwd = new WorldWindowGLCanvas();
             this.getContentPane().add(this.wwd, BorderLayout.CENTER);
@@ -194,15 +193,11 @@ public class WWJApplet extends JApplet
             m.getLayers().add(timeDepLayer);
             //insertBeforeLayerName(this.wwd,timeDepLayer,"Labels");*/
             
-            
             // add ECI Layer -- FOR SOME REASON IF BEFORE EFEF and turned off ECEF Orbits don't show up!! Coverage effecting this too, strange
             eciLayer = new ECIRenderableLayer(currentJulianDate.getMJD()); // create ECI layer
             orbitModel = new OrbitModelRenderable(satHash, wwd.getModel().getGlobe());
             eciLayer.addRenderable(orbitModel); // add renderable object
             eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
-            
-            //Grid Part of Code for Applet
-            //Although there is an error
             eciRadialGrid.setShowGrid(false);
             eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
             m.getLayers().add(0, eciLayer); // add ECI Layer
@@ -219,13 +214,12 @@ public class WWJApplet extends JApplet
             ecefModel = new ECEFModelRenderable(satHash, wwd.getModel().getGlobe());
             ecefLayer.addRenderable(ecefModel); // add renderable object
             ecefLayer.setEnabled(false);
-            m.getLayers().add(ecefLayer); // add ECI Layer
+            m.getLayers().add(ecefLayer); // add ECEF Layer
             //insertBeforeLayerName(this.wwd,ecefLayer,"Labels");
             
             RenderableLayer latLongLinesLayer = createLatLongLinesLayer();
             latLongLinesLayer.setName("Lat/Long Lines");
             latLongLinesLayer.setEnabled(false);
-            //insertBeforeCompass(this.getWwd(), latLongLinesLayer);
             m.getLayers().add(latLongLinesLayer); // add ECI Layer   
             //insertBeforeLayerName(this.wwd,latLongLinesLayer,"Labels");
 
@@ -240,8 +234,6 @@ public class WWJApplet extends JApplet
             //insertBeforeCompass(wwd, viewControlsLayer);
             //getLayerPanel().update(wwd);
             wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
-
-            
 
             // first call to update time to current time:
             currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
@@ -260,113 +252,7 @@ public class WWJApplet extends JApplet
 //            moon = new Moon();
 //            Moon.MoonPosition(currentJulianDate.getMJD());
             
-            
-            //FIX FOR TRANSPARENT EARTH PROBLEM: Remove old star layer and add new star layer.
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
-            //insertBeforeLayerName(this.wwd,starsLayer,"View Controls");
-            m.getLayers().add(0,starsLayer);
-            
-            // set the sun provider to the shader
-            spp = new CustomSunPositionProvider(sun);
-
-            //ALREADY HAVE AN ATMOSPHERE LAYER
-            // Replace sky gradient with this atmosphere layer when using sun shading
-            //this.atmosphereLayer = new AtmosphereLayer();
-            //m.getLayers().add(this.atmosphereLayer);
-            //insertBeforeLayerName(this.wwd,this.atmosphereLayer,"Labels");
-            
-            // Add lens flare layer
-            this.lensFlareLayer = LensFlareLayer.getPresetInstance(LensFlareLayer.PRESET_BOLD);
-            m.getLayers().add(this.lensFlareLayer);
-            //insertBeforeLayerName(this.wwd,this.lensFlareLayer,"Labels");
-            
-            // Get tessellator
-            this.tessellator = (RectangularNormalTessellator)m.getGlobe().getTessellator();
-            // set default colors for shading
-            this.tessellator.setAmbientColor(new Color(0.50f, 0.50f, 0.50f));
-            
-            LayerList WWLayers = m.getLayers();
-            String TheLayers = WWLayers.toString();
-            System.out.println(TheLayers);
-            
-            for (Layer layer : m.getLayers())
-            {
-//            if (layer instanceof TiledImageLayer)
-//            {
-//                ((TiledImageLayer) layer).setShowImageTileOutlines(false);
-//            }
-            if (layer instanceof LandsatI3)
-            {
-                ((TiledImageLayer) layer).setDrawBoundingVolumes(false);
-                ((TiledImageLayer) layer).setEnabled(false);
-            }
-            if (layer instanceof CompassLayer)
-            {
-                ((CompassLayer) layer).setShowTilt(true);
-                ((CompassLayer) layer).setEnabled(true);
-            }
-            if (layer instanceof PlaceNameLayer)
-            {
-                ((PlaceNameLayer) layer).setEnabled(false); // off
-            }
-            if (layer instanceof WorldMapLayer)
-            {
-                ((WorldMapLayer) layer).setEnabled(false); // off
-            }
-            if (layer instanceof USGSUrbanAreaOrtho)
-            {
-                ((USGSUrbanAreaOrtho) layer).setEnabled(false); // off
-            }
-            // save star layer
-            if (layer instanceof StarsLayer)
-            {
-                starsLayer = (StarsLayer) layer;
-                
-                // for now just enlarge radius by a factor of 10
-                starsLayer.setRadius(starsLayer.getRadius()*10.0);
-            }
-            if(layer instanceof CountryBoundariesLayer)
-            {
-                ((CountryBoundariesLayer) layer).setEnabled(false); // off by default
-            }
-            } // for layers
-            
-            //Visualization Tests
-//            m.setShowWireframeExterior(true);
-//            m.setShowWireframeInterior(true);
-            
-            // Add position listener to update light direction relative to the eye
-            this.wwd.addPositionListener(new PositionListener()
-            {
-                Vec4 eyePoint;
-
-                    public void moved(PositionEvent event)
-                    {
-                        if(eyePoint == null || eyePoint.distanceTo3(wwd.getView().getEyePoint()) > 1000)
-                        {
-                            update(true);
-                            eyePoint = wwd.getView().getEyePoint();
-                        }
-                    }
-            });
-
-            setSunShadingOn(true); // enable sun shading by default
-            // END Sun Shading -------------
-
-            // correct clipping plane -- so entire orbits are shown - maybe make variable?
-            setupView(); // setup needed viewing specs and use of AutoClipBasicOrbitView
-            
-            // Add the status bar
-            StatusBar statusBar = new StatusBar();
-            this.getContentPane().add(statusBar, BorderLayout.PAGE_END);
-
-            // Forward events to the status bar to provide the cursor position info.
-            statusBar.setEventSource(this.wwd);
-
-            // Setup a select listener for the worldmap click-and-go feature
-            this.wwd.addSelectListener(new ClickAndGoSelectListener(this.wwd, WorldMapLayer.class));
-
-                        OnlineInput input = new OnlineInput("http://localhost:8080/parameters.html");
+            OnlineInput input = new OnlineInput("http://localhost:8080/parameters.html");
             int n = input.getSize();
             for (int i = 0; i <n; i++)
             {
@@ -423,7 +309,7 @@ public class WWJApplet extends JApplet
                     double time = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
                     setTime(time);
             }
-            
+          //OLD SATELLITE READING METHOD  
 //            CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
 //            StkEphemerisReader reader = new StkEphemerisReader();
 //            //String filename = "file:///C:/Documents and Settings/MMascaro/Desktop/WorldWind_Applet/test_ephem.e";
@@ -448,6 +334,117 @@ public class WWJApplet extends JApplet
 //            setTime(time);
 //            satellite.propogate2JulDate(this.getCurrentJulTime());
 //            satHash.put("Test", satellite);
+            
+            //FIX FOR TRANSPARENT EARTH PROBLEM: Remove old star layer and add new star layer.
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+            //insertBeforeLayerName(this.wwd,starsLayer,"View Controls");
+            m.getLayers().add(0,starsLayer);
+            
+            // set the sun provider to the shader
+            spp = new CustomSunPositionProvider(sun);
+
+            //ALREADY HAVE AN ATMOSPHERE LAYER (Its just not working)
+            // Replace sky gradient with this atmosphere layer when using sun shading
+            this.atmosphereLayer = new AtmosphereLayer();
+            m.getLayers().add(4,this.atmosphereLayer);
+            //insertBeforeLayerName(this.wwd,this.atmosphereLayer,"Labels");
+            
+            // Add lens flare layer
+            this.lensFlareLayer = LensFlareLayer.getPresetInstance(LensFlareLayer.PRESET_BOLD);
+            m.getLayers().add(this.lensFlareLayer);
+            //insertBeforeLayerName(this.wwd,this.lensFlareLayer,"Labels");
+            
+            // Get tessellator
+            this.tessellator = (RectangularNormalTessellator)m.getGlobe().getTessellator();
+            // set default colors for shading
+            this.tessellator.setAmbientColor(new Color(0.50f, 0.50f, 0.50f));
+            
+            LayerList WWLayers = m.getLayers();
+            String TheLayers = WWLayers.toString();
+            System.out.println(TheLayers);
+            
+            for (Layer layer : m.getLayers())
+            {
+//            if (layer instanceof TiledImageLayer)
+//            {
+//                ((TiledImageLayer) layer).setShowImageTileOutlines(false);
+//            }
+            if (layer instanceof LandsatI3)
+            {
+                ((TiledImageLayer) layer).setDrawBoundingVolumes(false);
+                ((TiledImageLayer) layer).setEnabled(false);
+            }
+            if (layer instanceof CompassLayer)
+            {
+                ((CompassLayer) layer).setShowTilt(true);
+                ((CompassLayer) layer).setEnabled(true);
+            }
+            if (layer instanceof PlaceNameLayer)
+            {
+                ((PlaceNameLayer) layer).setEnabled(false); // off
+            }
+            if (layer instanceof WorldMapLayer)
+            {
+                ((WorldMapLayer) layer).setEnabled(false); // off
+            }
+            if (layer instanceof USGSUrbanAreaOrtho)
+            {
+                ((USGSUrbanAreaOrtho) layer).setEnabled(false); // off
+            }
+            // save star layer
+            if (layer instanceof StarsLayer)
+            {
+                starsLayer = (StarsLayer) layer;
+                
+                // for now just enlarge radius by a factor of 10
+                starsLayer.setRadius(starsLayer.getRadius()*10.0);
+            }
+            if(layer instanceof CountryBoundariesLayer)
+            {
+                ((CountryBoundariesLayer) layer).setEnabled(false); // off by default
+            }
+            if(layer instanceof AtmosphereLayer)
+            {
+                atmosphereLayer = (AtmosphereLayer) layer;
+                atmosphereLayer.setEnabled(true);
+            }
+            if(layer instanceof SkyGradientLayer)
+                ((SkyGradientLayer) layer).setEnabled(false);
+            } // for layers
+            
+            //Visualization Tests
+//            m.setShowWireframeExterior(true);
+//            m.setShowWireframeInterior(true);
+            
+            // Add position listener to update light direction relative to the eye
+            this.wwd.addPositionListener(new PositionListener()
+            {
+                Vec4 eyePoint;
+
+                    public void moved(PositionEvent event)
+                    {
+                        if(eyePoint == null || eyePoint.distanceTo3(wwd.getView().getEyePoint()) > 1000)
+                        {
+                            update(true);
+                            eyePoint = wwd.getView().getEyePoint();
+                        }
+                    }
+            });
+
+            setSunShadingOn(true); // enable sun shading by default
+            // END Sun Shading -------------
+
+            setupView(); // setup needed viewing specs and use of AutoClipBasicOrbitView
+            
+            // Add the status bar
+            StatusBar statusBar = new StatusBar();
+            this.getContentPane().add(statusBar, BorderLayout.PAGE_END);
+
+            // Forward events to the status bar to provide the cursor position info.
+            statusBar.setEventSource(this.wwd);
+
+            // Setup a select listener for the worldmap click-and-go feature
+            this.wwd.addSelectListener(new ClickAndGoSelectListener(this.wwd, WorldMapLayer.class));
             
             
             updateTime(); // update plots
@@ -853,7 +850,7 @@ public void addCustomSat(String name)
             this.tessellator.setLightDirection(light);
             this.lensFlareLayer.setSunDirection(sun);
             //Already an atmosphere layer!
-            //this.atmosphereLayer.setSunDirection(sun);
+            atmosphereLayer.setSunDirection(sun);
             // Redraw if needed
             if(redraw)
             {
@@ -880,7 +877,7 @@ public void addCustomSat(String name)
                 Layer l = wwd.getModel().getLayers().get(i);
                 if(l instanceof SkyGradientLayer)
                 {
-//                    wwd.getModel().getLayers().set(i, this.atmosphereLayer);
+                    wwd.getModel().getLayers().set(i, this.atmosphereLayer);
                 }
             }
         }
