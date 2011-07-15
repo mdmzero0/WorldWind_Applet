@@ -408,8 +408,6 @@ public class WWJApplet extends JApplet
                 atmosphereLayer = (AtmosphereLayer) layer;
                 atmosphereLayer.setEnabled(true);
             }
-            if(layer instanceof SkyGradientLayer)
-                ((SkyGradientLayer) layer).setEnabled(false);
             } // for layers
             
             //Visualization Tests
