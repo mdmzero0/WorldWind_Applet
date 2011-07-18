@@ -158,6 +158,9 @@ public class WWJApplet extends JApplet
     //Step sizes
     double[] steps = new double[] {1, 10, 30, 60, 120, 300, 1800, 3600, 7200, 86400};
     int stepNumber = 3;
+    
+    BasicOrbitViewLimits limits;
+    
     public WWJApplet()
     {       
     }
@@ -246,7 +249,12 @@ public class WWJApplet extends JApplet
             
             //Step size display
             stepDisplay = new JTextField();
-            stepDisplay.setText("Step Size (Seconds): " + animationSimStepSeconds);
+            stepDisplay.setText("" + animationSimStepSeconds);
+            stepDisplay.addActionListener((new java.awt.event.ActionListener() {
+                @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                stepDisplayActionPerformed(evt);
+            }}));
             toolbar.add(stepDisplay); 
             
             //Decrease step size
@@ -311,7 +319,7 @@ public class WWJApplet extends JApplet
             eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
             eciRadialGrid.setShowGrid(false);
             eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
-            m.getLayers().add(0, eciLayer); // add ECI Layer
+            m.getLayers().add(0,eciLayer); // add ECI Layer
             //insertBeforeLayerName(this.wwd,eciLayer, "Labels");
             
             CountryBoundariesLayer country = new CountryBoundariesLayer();
@@ -362,6 +370,8 @@ public class WWJApplet extends JApplet
 //            // create Moon object
 //            moon = new Moon();
 //            Moon.MoonPosition(currentJulianDate.getMJD());
+            try{
+            
             
             input = new OnlineInput("http://localhost:8080/parameters.html");
             int n = input.getSize();
@@ -411,7 +421,7 @@ public class WWJApplet extends JApplet
 //                    S.setUse3dModel(true);
                     if (input.getModelCentered(i))
                     {
-                           System.out.println("CANT DO THAT YET");
+                           errorBox("Can't do that yet!");
                     }
                     else
                     {
@@ -420,6 +430,9 @@ public class WWJApplet extends JApplet
                     time = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
                     setTime(time);
             }
+            }
+            catch(Exception e)
+            {errorBox("No satellites found");}
           //OLD SATELLITE READING METHOD  
 //            CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
 //            StkEphemerisReader reader = new StkEphemerisReader();
@@ -829,6 +842,7 @@ public class WWJApplet extends JApplet
     } // checkTimeDiffResetGroundTracks
      public void forceRepainting()
     {
+        this.update(false);
         wwd.redraw();
     }// forceRepainting
      
@@ -1116,41 +1130,49 @@ public void addCustomSat(String name)
         double date = this.getCurrentJulTime();
         double currentMJDtime = date - AstroConst.JDminusMJD;
         double deltaTT2UTC = Time.deltaT(currentMJDtime); // = TT - UTC
-        Vector<StateVector> ephemeris = satHash.get(input.getSatelliteName(input.getSize()-1)).getEphemeris();
-        final double maxTime =  ephemeris.get( ephemeris.size()-1).state[0] - deltaTT2UTC;      
+        double maxTempTime = 0;
+        //Find the very last time in the very last ephemeris
+        for (int i = 1; i<input.getSize(); i++ )
+        {
+            Vector<StateVector> ephemeris = satHash.get(input.getSatelliteName(i-1)).getEphemeris();
+            double tempTime = ephemeris.get(ephemeris.size()-1).state[0] - deltaTT2UTC;
+            if(tempTime > maxTempTime)
+            {
+                maxTempTime = tempTime;
+            }
+        }
+        
+        final double maxTime =  maxTempTime;      
         playTimer = new Timer(animationRefreshRateMs, new ActionListener()
                 {
                 @Override
                     public void actionPerformed(ActionEvent event)
                     {
-                        if(getCurrentJulianTime()==maxTime-animationSimStepSeconds)
+                    //Ensure we're still within ephemeris time range
+                    //include step size so orbit is still shown
+                    //without this, the very first instant the orbit is gone will be the end point
+                    double stepJulian = animationSimStepSeconds/86400;
+                    if(getCurrentJulianTime() > (maxTime-stepJulian))
                         {
                             playTimer.stop();
+                            play = true;
                         }
                     // take one time step in the animation
                     currentPlayDirection = 1;
                     updateTime(); // animate
-                    long stopTime = System.currentTimeMillis();
-
-                    fpsAnimation = 2.0 / ((stopTime-lastFPSms)/1000.0); // fps calculation
-                    lastFPSms = stopTime;
-                    // goal FPS:
-                    //fpsAnimation = 1.0 / (animationRefreshRateMs/1000.0);
                     }
                 });
         playTimer.start();
-        if(getCurrentJulianTime()==maxTime-animationSimStepSeconds)
-        {
-            playTimer.stop();
-        }
-        
-//        System.out.println("All done ");
-//        System.out.println(this.getCurrentJulTime());
     }
         else
         {
-    playTimer.stop();
-    }}
+            if(play)
+            {}
+            else
+            {playTimer.stop();
+            play = true;}
+        }
+    }
     
 
 public void playButtonActionPerformed(ActionEvent e)
@@ -1164,8 +1186,13 @@ public void playButtonActionPerformed(ActionEvent e)
 
 public void pauseButtonActionPerformed(ActionEvent e)
 {
+    if(play)
+    {}
+    else
+    {
         animateApplet(false);
         play = true; 
+    }
 }
 public void resetButtonActionPerformed(ActionEvent e)
 {
@@ -1206,6 +1233,26 @@ public void eciButtonActionPerformed(ActionEvent e)
 public void ecefButtonActionPerformed(ActionEvent e)
 {
     viewModeECI = false;
+}
+public void stepDisplayActionPerformed(ActionEvent e)
+{
+    //Assume it worked
+    boolean successStep = true;
+    double tempStep = animationSimStepSeconds;
+    try
+    {
+        String text = stepDisplay.getText();
+        tempStep = Double.parseDouble(text); 
+    }
+    catch(Exception oops)
+    {
+        successStep = false;
+        System.out.println("Improper step size");
+    }
+    if(successStep)
+    {
+        animationSimStepSeconds = tempStep;
+    }
 }
 
 public double getCurrentJulianTime()
@@ -1285,4 +1332,11 @@ public void WWsetMJD(double mjd)
         timeDepLayer.setCurrentMJD(mjd);
         
     } // set MJD
+
+public void errorBox(String error)
+{
+    JFrame errorFrame = new JFrame("Error");
+    Container Content = this.getContentPane();
+    Content.add(errorFrame);
+}
 }
