@@ -54,7 +54,7 @@ import javax.swing.Timer;
  * @version $Id: WWJApplet.java 15441 2011-05-14 08:50:57Z tgaskins $
  */
 
-public class WWJApplet extends JApplet implements ActionListener
+public class WWJApplet extends JApplet
 {
     protected WorldWindowGLCanvas wwd;
     protected RenderableLayer labelsLayer;
@@ -70,6 +70,7 @@ public class WWJApplet extends JApplet implements ActionListener
     
     //Time!
     Time currentJulianDate = new Time(); // current sim or real time (Julian Date)
+    double time;
     
     // date formats for displaying and reading in
     private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss.SSS z");
@@ -141,10 +142,22 @@ public class WWJApplet extends JApplet implements ActionListener
     //Satellite input
     OnlineInput input;
     
-    //Button
-    JToggleButton playScenario;
+    //Buttons
+    JButton playScenario;
+    JButton pauseScenario;
+    JButton resetScenario;
+    JButton stepSizeUp;
+    JButton stepSizeDown;
+    JRadioButton ECIon;
+    JRadioButton ECEFon;
     private boolean play = true;
+    JToolBar toolbar; 
+    JTextField dateDisplay;
+    JTextField stepDisplay;
     
+    //Step sizes
+    double[] steps = new double[] {1, 10, 30, 60, 120, 300, 1800, 3600, 7200, 86400};
+    int stepNumber = 3;
     public WWJApplet()
     {       
     }
@@ -184,6 +197,99 @@ public class WWJApplet extends JApplet implements ActionListener
             // Create the default model as described in the current worldwind properties.
             Model m = (Model) WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME);
             this.wwd.setModel(m);
+            
+            //SET UP GUI
+            //Add a tool bar
+            Container Content = this.getContentPane();
+            toolbar = new JToolBar();
+            Content.add(toolbar, BorderLayout.PAGE_START);
+            
+            //Add the play button
+            playScenario = new JButton("Play");
+            playScenario.setBounds(30,30,70,30);
+            playScenario.addActionListener((new java.awt.event.ActionListener() {
+                @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                playButtonActionPerformed(evt);
+            }}));
+            toolbar.add(playScenario);
+            
+            //Add pause button
+            pauseScenario = new JButton("Pause");
+            pauseScenario.setBounds(30,30,70,30);
+            pauseScenario.addActionListener((new java.awt.event.ActionListener() {
+                @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                pauseButtonActionPerformed(evt);
+            }}));
+            toolbar.add(pauseScenario); 
+            
+            //Reset button
+            resetScenario = new JButton("Reset");
+            resetScenario.setBounds(30,30,70,30);
+            resetScenario.addActionListener((new java.awt.event.ActionListener() {
+                @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                resetButtonActionPerformed(evt);
+            }}));
+            toolbar.add(resetScenario);
+            
+            //Increase step size
+            stepSizeUp = new JButton("+");
+            stepSizeUp.setBounds(30,30,70,30);
+            stepSizeUp.addActionListener((new java.awt.event.ActionListener() {
+                @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                stepUpButtonActionPerformed(evt);
+            }}));
+            toolbar.add(stepSizeUp);
+            
+            //Step size display
+            stepDisplay = new JTextField();
+            stepDisplay.setText("Step Size (Seconds): " + animationSimStepSeconds);
+            toolbar.add(stepDisplay); 
+            
+            //Decrease step size
+            stepSizeDown = new JButton("-");
+            stepSizeDown.setBounds(30,30,70,30);
+            stepSizeDown.addActionListener((new java.awt.event.ActionListener() {
+                @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                stepDownButtonActionPerformed(evt);
+            }}));
+            toolbar.add(stepSizeDown);
+            
+            //ECI Button
+            ECIon = new JRadioButton("ECI");
+            ECIon.setBounds(30,30,70,30);
+            ECIon.setSelected(true);
+            ECIon.addActionListener((new java.awt.event.ActionListener() {
+                @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                eciButtonActionPerformed(evt);
+            }}));
+            toolbar.add(ECIon);
+            
+            //ECEF Button
+            ECEFon = new JRadioButton("ECEF");
+            ECEFon.setBounds(30,30,70,30);
+            ECEFon.setSelected(true);
+            ECEFon.addActionListener((new java.awt.event.ActionListener() {
+                @Override
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ecefButtonActionPerformed(evt);
+            }}));
+            toolbar.add(ECEFon);
+            
+            //Connet the radio buttons
+            ButtonGroup bg = new ButtonGroup();
+            bg.add(ECIon);
+            bg.add(ECEFon); 
+            
+            //Add a date text field
+            dateDisplay = new JTextField("Date/Time");
+            dateDisplay.setText( currentJulianDate.getDateTimeStr() );
+            toolbar.add(dateDisplay);
 
             //Remove original Stars Layer
             m.getLayers().remove(0);
@@ -311,7 +417,7 @@ public class WWJApplet extends JApplet implements ActionListener
                     {
                             //dont do anything!
                     }
-                    double time = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
+                    time = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
                     setTime(time);
             }
           //OLD SATELLITE READING METHOD  
@@ -450,16 +556,8 @@ public class WWJApplet extends JApplet implements ActionListener
             // Setup a select listener for the worldmap click-and-go feature
             this.wwd.addSelectListener(new ClickAndGoSelectListener(this.wwd, WorldMapLayer.class));
             
-            
             updateTime(); // update plots
             System.out.print(this.getCurrentJulTime() + "\n");
-            
-            //Add the play button
-            playScenario = new JToggleButton("Play Scenario");
-            playScenario.setBounds(30,30,30,30);
-            playScenario.addActionListener(this);
-            Container Content = this.getContentPane();
-            Content.add(playScenario, BorderLayout.WEST);
             
             // Call javascript appletInit()
             try
@@ -693,7 +791,7 @@ public class WWJApplet extends JApplet implements ActionListener
         checkTimeDiffResetGroundTracks(timeDiffDays);        
                 
         // update date box:
-        //dateTextField.setText( currentJulianDate.getDateTimeStr() );//String.format("%tc",cal) );
+        dateDisplay.setText( currentJulianDate.getDateTimeStr() );//String.format("%tc",cal) );
         
         // now propogate all satellites to the current time  
         for (AbstractSatellite sat : satHash.values() )
@@ -1019,14 +1117,16 @@ public void addCustomSat(String name)
         double currentMJDtime = date - AstroConst.JDminusMJD;
         double deltaTT2UTC = Time.deltaT(currentMJDtime); // = TT - UTC
         Vector<StateVector> ephemeris = satHash.get(input.getSatelliteName(input.getSize()-1)).getEphemeris();
-        final double maxTime =  ephemeris.get( ephemeris.size()-1).state[0] - deltaTT2UTC;
-        System.out.println(maxTime);
-        
+        final double maxTime =  ephemeris.get( ephemeris.size()-1).state[0] - deltaTT2UTC;      
         playTimer = new Timer(animationRefreshRateMs, new ActionListener()
                 {
                 @Override
                     public void actionPerformed(ActionEvent event)
                     {
+                        if(getCurrentJulianTime()==maxTime-animationSimStepSeconds)
+                        {
+                            playTimer.stop();
+                        }
                     // take one time step in the animation
                     currentPlayDirection = 1;
                     updateTime(); // animate
@@ -1036,13 +1136,13 @@ public void addCustomSat(String name)
                     lastFPSms = stopTime;
                     // goal FPS:
                     //fpsAnimation = 1.0 / (animationRefreshRateMs/1000.0);
-                            if(getCurrentJulianTime()==maxTime-animationSimStepSeconds)
-                            {
-                                playTimer.stop();
-                            }
                     }
                 });
         playTimer.start();
+        if(getCurrentJulianTime()==maxTime-animationSimStepSeconds)
+        {
+            playTimer.stop();
+        }
         
 //        System.out.println("All done ");
 //        System.out.println(this.getCurrentJulTime());
@@ -1052,21 +1152,60 @@ public void addCustomSat(String name)
     playTimer.stop();
     }}
     
-    @Override
-public void actionPerformed(ActionEvent e)
+
+public void playButtonActionPerformed(ActionEvent e)
 {
     if(play)
     {
-        playScenario.setText("Pause");
         animateApplet(true);
         play = false;
     }
+}
+
+public void pauseButtonActionPerformed(ActionEvent e)
+{
+        animateApplet(false);
+        play = true; 
+}
+public void resetButtonActionPerformed(ActionEvent e)
+{
+    animateApplet(false);
+    play = true;
+    setTime(time);    
+}
+public void stepUpButtonActionPerformed(ActionEvent e)
+{
+    if(stepNumber == steps.length-1)
+    {
+            //Already max!
+    }
     else
     {
-        playScenario.setText("Play");
-        animateApplet(false);
-        play = true;
+    animationSimStepSeconds = steps[stepNumber+1];
+    stepNumber = stepNumber+1;
+    stepDisplay.setText("Step Size (Seconds): " + animationSimStepSeconds);
     }
+}
+public void stepDownButtonActionPerformed(ActionEvent e)
+{
+    if(stepNumber>0)
+    {
+    animationSimStepSeconds = steps[stepNumber-1];
+    stepNumber = stepNumber-1;
+    stepDisplay.setText("Step Size (Seconds): " + animationSimStepSeconds);
+    }
+    else
+    {
+        //Already min!
+    }
+}
+public void eciButtonActionPerformed(ActionEvent e)
+{
+    viewModeECI = true;
+}
+public void ecefButtonActionPerformed(ActionEvent e)
+{
+    viewModeECI = false;
 }
 
 public double getCurrentJulianTime()
@@ -1078,12 +1217,12 @@ public void WWsetMJD(double mjd)
                
         if(viewModeECI)
         {
-//            // Hmm need to do something to keet the ECI view moving even after user interaction
+//            // Hmm need to do something to keep the ECI view moving even after user interaction
 //            // seems to work after you click off globe after messing with it
 //            // this fixes the problem:
-//            wwd.getView().stopStateIterators();
-            wwd.getView().stopMovement(); //seems to fix prop in v0.5
-//            
+            //NEED TO GET THE STOP STATE ITERATOR WORKING!
+//              wwd.getView().stopStateIterators();
+            wwd.getView().stopMovement(); //seems to fix prop in v0.5 
 //            // update rotation of view and Stars
             double theta0 = eciLayer.getRotateECIdeg();
 //
