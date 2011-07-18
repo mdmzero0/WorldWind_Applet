@@ -1062,6 +1062,7 @@ public class CustomSatellite  extends AbstractSatellite
 //        return missionTableModel;
 //    }
 
+    @Override
     public Vector<StateVector> getEphemeris()
     {
         return ephemeris;

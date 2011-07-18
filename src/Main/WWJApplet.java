@@ -13,11 +13,8 @@ import gov.nasa.worldwind.awt.WorldWindowGLCanvas;
 import gov.nasa.worldwind.examples.ClickAndGoSelectListener;
 import gov.nasa.worldwind.geom.*;
 import gov.nasa.worldwind.layers.*;
-import gov.nasa.worldwind.render.GlobeAnnotation;
 import gov.nasa.worldwind.util.StatusBar;
 import gov.nasa.worldwind.view.orbit.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import netscape.javascript.JSObject;
 //Start of JSatTrak imports
 import Bodies.*;
@@ -27,7 +24,6 @@ import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 import Satellite.*;
 import java.util.Vector;
-import javax.swing.Timer;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import Layers.*;
@@ -36,7 +32,6 @@ import gov.nasa.worldwind.render.*;
 import java.util.ArrayList;
 import gov.nasa.worldwind.event.*;
 import gov.nasa.worldwind.awt.AWTInputHandler;
-import gov.nasa.worldwind.view.BasicView;
 import View.*;
 import gov.nasa.worldwind.view.orbit.BasicOrbitView;
 import java.util.GregorianCalendar;
@@ -47,6 +42,8 @@ import java.awt.*;
 
 import gov.nasa.worldwind.layers.placename.*;
 import gov.nasa.worldwind.layers.Earth.*;
+import Utilities.AstroConst;
+import javax.swing.Timer;
 
 /**
  * Provides a base application framework for simple WorldWind applets.
@@ -57,7 +54,7 @@ import gov.nasa.worldwind.layers.Earth.*;
  * @version $Id: WWJApplet.java 15441 2011-05-14 08:50:57Z tgaskins $
  */
 
-public class WWJApplet extends JApplet
+public class WWJApplet extends JApplet implements ActionListener
 {
     protected WorldWindowGLCanvas wwd;
     protected RenderableLayer labelsLayer;
@@ -88,7 +85,7 @@ public class WWJApplet extends JApplet
     
     //Scenario Update variables
     int currentPlayDirection = 0; // 1= forward, -1=backward, =0-no animation step, but can update time (esentially a graphic ini or refresh)
-    private double animationSimStepSeconds = 1.0; // dt in Days per animation step/time update
+    private double animationSimStepSeconds = 60.0; // dt in Days per animation step/time update
     
     //Animation variables
     private boolean stopHit = false;
@@ -141,10 +138,18 @@ public class WWJApplet extends JApplet
     //Reading ephemeris data
     StkEphemerisReader Reader = new StkEphemerisReader();
     
+    //Satellite input
+    OnlineInput input;
+    
+    //Button
+    JToggleButton playScenario;
+    private boolean play = true;
+    
     public WWJApplet()
     {       
     }
 
+    @Override
     public void init()
     {
         Vector<StateVector> vector;
@@ -173,7 +178,6 @@ public class WWJApplet extends JApplet
             // sun shading needs this
             Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
 
-
             // Create World Window GL Canvas
             this.wwd = new WorldWindowGLCanvas();
             this.getContentPane().add(this.wwd, BorderLayout.CENTER);
@@ -181,28 +185,25 @@ public class WWJApplet extends JApplet
             Model m = (Model) WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME);
             this.wwd.setModel(m);
 
+            //Remove original Stars Layer
             m.getLayers().remove(0);
             
-            // Add a renderable layer for application labels
-            this.labelsLayer = new RenderableLayer();
-            this.labelsLayer.setName("Labels");
-            insertBeforeLayerName(this.wwd, this.labelsLayer, "Compass");
+//            // Add a renderable layer for application labels
+//            this.labelsLayer = new RenderableLayer();
+//            this.labelsLayer.setName("Labels");
+//            insertBeforeLayerName(this.wwd, this.labelsLayer, "Compass");
             
             // add EcefTimeDepRenderableLayer layer
             timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD(),sun);
             m.getLayers().add(timeDepLayer);
             //insertBeforeLayerName(this.wwd,timeDepLayer,"Labels");*/
             
-            
             // add ECI Layer -- FOR SOME REASON IF BEFORE EFEF and turned off ECEF Orbits don't show up!! Coverage effecting this too, strange
             eciLayer = new ECIRenderableLayer(currentJulianDate.getMJD()); // create ECI layer
             orbitModel = new OrbitModelRenderable(satHash, wwd.getModel().getGlobe());
             eciLayer.addRenderable(orbitModel); // add renderable object
             eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
-            
-            //Grid Part of Code for Applet
-            //Although there is an error
-            eciRadialGrid.setShowGrid(true);
+            eciRadialGrid.setShowGrid(false);
             eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
             m.getLayers().add(0, eciLayer); // add ECI Layer
             //insertBeforeLayerName(this.wwd,eciLayer, "Labels");
@@ -212,38 +213,20 @@ public class WWJApplet extends JApplet
             m.getLayers().add(country); 
             Layer uhh = m.getLayers().getLayerByName("Political Boundaries");
             m.getLayers().remove(uhh);     
-         
-//            PlaceNameServiceSet set = new PlaceNameServiceSet();
-//            PlaceNameLayer places = new PlaceNameLayer(set);
-//            m.getLayers().add(places);
             
             // add ECEF Layer
             ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
             ecefModel = new ECEFModelRenderable(satHash, wwd.getModel().getGlobe());
             ecefLayer.addRenderable(ecefModel); // add renderable object
             ecefLayer.setEnabled(false);
-            m.getLayers().add(ecefLayer); // add ECI Layer
+            m.getLayers().add(ecefLayer); // add ECEF Layer
             //insertBeforeLayerName(this.wwd,ecefLayer,"Labels");
             
             RenderableLayer latLongLinesLayer = createLatLongLinesLayer();
             latLongLinesLayer.setName("Lat/Long Lines");
             latLongLinesLayer.setEnabled(false);
-            //insertBeforeCompass(this.getWwd(), latLongLinesLayer);
             m.getLayers().add(latLongLinesLayer); // add ECI Layer   
             //insertBeforeLayerName(this.wwd,latLongLinesLayer,"Labels");
-            
-/*            // Add view controls layer and select listener - New in WWJ V0.6
-            viewControlsLayer = new ViewControlsLayer();
-            viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
-            viewControlsLayer.setScale(6/10d);
-            viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
-            viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
-            viewControlsLayer.setEnabled(true); // turn off by default
-            m.getLayers().add(viewControlsLayer);
-            //insertBeforeCompass(wwd, viewControlsLayer);
-            //getLayerPanel().update(wwd);
-            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));*/
-            
 
             viewControlsLayer = new ViewControlsLayer();
             viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
@@ -256,8 +239,6 @@ public class WWJApplet extends JApplet
             //insertBeforeCompass(wwd, viewControlsLayer);
             //getLayerPanel().update(wwd);
             wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
-
-            
 
             // first call to update time to current time:
             currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
@@ -276,7 +257,7 @@ public class WWJApplet extends JApplet
 //            moon = new Moon();
 //            Moon.MoonPosition(currentJulianDate.getMJD());
             
-            OnlineInput input = new OnlineInput("http://localhost:8080/parameters.html");
+            input = new OnlineInput("http://localhost:8080/parameters.html");
             int n = input.getSize();
             for (int i = 0; i <n; i++)
             {
@@ -333,7 +314,7 @@ public class WWJApplet extends JApplet
                     double time = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
                     setTime(time);
             }
-            
+          //OLD SATELLITE READING METHOD  
 //            CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
 //            StkEphemerisReader reader = new StkEphemerisReader();
 //            //String filename = "file:///C:/Documents and Settings/MMascaro/Desktop/WorldWind_Applet/test_ephem.e";
@@ -357,11 +338,7 @@ public class WWJApplet extends JApplet
 //            double time = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
 //            setTime(time);
 //            satellite.propogate2JulDate(this.getCurrentJulTime());
-//            satHash.put("Test", satellite);
-            
-            
-            updateTime(); // update plots
-            System.out.print(this.getCurrentJulTime() + "\n");
+//            satHash.put("Test", satellite);           
             
             //FIX FOR TRANSPARENT EARTH PROBLEM: Remove old star layer and add new star layer.
             starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
@@ -371,10 +348,10 @@ public class WWJApplet extends JApplet
             // set the sun provider to the shader
             spp = new CustomSunPositionProvider(sun);
 
-            //ALREADY HAVE AN ATMOSPHERE LAYER
+            //ALREADY HAVE AN ATMOSPHERE LAYER (Its just not working)
             // Replace sky gradient with this atmosphere layer when using sun shading
-            //this.atmosphereLayer = new AtmosphereLayer();
-            //m.getLayers().add(this.atmosphereLayer);
+            this.atmosphereLayer = new AtmosphereLayer();
+            m.getLayers().add(4,this.atmosphereLayer);
             //insertBeforeLayerName(this.wwd,this.atmosphereLayer,"Labels");
             
             // Add lens flare layer
@@ -405,7 +382,7 @@ public class WWJApplet extends JApplet
             if (layer instanceof CompassLayer)
             {
                 ((CompassLayer) layer).setShowTilt(true);
-                ((CompassLayer) layer).setEnabled(false);
+                ((CompassLayer) layer).setEnabled(true);
             }
             if (layer instanceof PlaceNameLayer)
             {
@@ -431,6 +408,11 @@ public class WWJApplet extends JApplet
             {
                 ((CountryBoundariesLayer) layer).setEnabled(false); // off by default
             }
+            if(layer instanceof AtmosphereLayer)
+            {
+                atmosphereLayer = (AtmosphereLayer) layer;
+                atmosphereLayer.setEnabled(true);
+            }
             } // for layers
             
             //Visualization Tests
@@ -442,6 +424,7 @@ public class WWJApplet extends JApplet
             {
                 Vec4 eyePoint;
 
+                @Override
                     public void moved(PositionEvent event)
                     {
                         if(eyePoint == null || eyePoint.distanceTo3(wwd.getView().getEyePoint()) > 1000)
@@ -455,7 +438,6 @@ public class WWJApplet extends JApplet
             setSunShadingOn(true); // enable sun shading by default
             // END Sun Shading -------------
 
-            // correct clipping plane -- so entire orbits are shown - maybe make variable?
             setupView(); // setup needed viewing specs and use of AutoClipBasicOrbitView
             
             // Add the status bar
@@ -467,7 +449,18 @@ public class WWJApplet extends JApplet
 
             // Setup a select listener for the worldmap click-and-go feature
             this.wwd.addSelectListener(new ClickAndGoSelectListener(this.wwd, WorldMapLayer.class));
-
+            
+            
+            updateTime(); // update plots
+            System.out.print(this.getCurrentJulTime() + "\n");
+            
+            //Add the play button
+            playScenario = new JToggleButton("Play Scenario");
+            playScenario.setBounds(30,30,30,30);
+            playScenario.addActionListener(this);
+            Container Content = this.getContentPane();
+            Content.add(playScenario, BorderLayout.WEST);
+            
             // Call javascript appletInit()
             try
             {
@@ -478,12 +471,13 @@ public class WWJApplet extends JApplet
             {
             }
         }
+                
         catch (Throwable e)
         {
-            e.printStackTrace();
         }
     }
 
+    @Override
     public void start()
     {
         // Call javascript appletStart()
@@ -497,6 +491,7 @@ public class WWJApplet extends JApplet
         }
     }
 
+    @Override
     public void stop()
     {
         // Call javascript appletSop()
@@ -683,14 +678,14 @@ public class WWJApplet extends JApplet
 
         }*/
         //else
-        {
-            // non-real time mode add fraction of time to current jul date
-            //currentJulianDate += currentPlayDirection*animationSimStepDays;
-            currentJulianDate.addSeconds( currentPlayDirection*animationSimStepSeconds );
-        }
-        
+//        {
+//            // non-real time mode add fraction of time to current jul date
+//            //currentJulianDate += currentPlayDirection*animationSimStepDays;
+//            currentJulianDate.addSeconds( currentPlayDirection*animationSimStepSeconds );
+//        }
+        currentJulianDate.addSeconds( currentPlayDirection*animationSimStepSeconds );
         // update sun position
-//        sun.setCurrentMJD(currentJulianDate.getMJD());
+        sun.setCurrentMJD(currentJulianDate.getMJD());
                 
         // if time jumps by more than 91 minutes check period of sat to see if
         // ground tracks need to be updated
@@ -714,7 +709,7 @@ public class WWJApplet extends JApplet
                 tdo.updateTime(currentJulianDate, satHash);
             }
         }
-                
+        WWsetMJD(currentJulianDate.getMJD());        
         forceRepainting(); // repaint 2d/3d earth
         
         
@@ -738,42 +733,7 @@ public class WWJApplet extends JApplet
     {
         wwd.redraw();
     }// forceRepainting
-    public void playScenario()
-    {
-        currentPlayDirection = 1; // forwards
-        runAnimation(); // perform animation
-    } // playScenario
-
-    //NEEDS TO BE FIXED TO RUN WITHOUT ACTION LISTENER
-    private void runAnimation()
-    {
-        lastFPSms = System.currentTimeMillis();
-        playTimer = new Timer(animationRefreshRateMs, new ActionListener()
-        {
-            public void actionPerformed(ActionEvent evt)
-            {
-                // take one time step in the aimation
-                updateTime(); // animate
-                long stopTime = System.currentTimeMillis();
-                
-                fpsAnimation = 1.0 / ((stopTime-lastFPSms)/1000.0); // fps calculation
-                lastFPSms = stopTime;
-                // goal FPS:
-                //fpsAnimation = 1.0 / (animationRefreshRateMs/1000.0);
-                
-                if (stopHit)
-                {
-                    playTimer.stop();                   
-                }
-                // SEG - if update took a long time reduce the timers repeat interval
-                                
-            }
-        });
-    } // runAnimation
-    public void stopAnimation()
-    {
-        stopHit = true; // set flag for next animation step
-    }
+     
 public void addCustomSat(String name)
     {
         // if nothing given:
@@ -862,13 +822,13 @@ public void addCustomSat(String name)
         {
             // Compute Sun position according to current date and time
             LatLon sunPos = spp.getPosition();
-            Vec4 sun = wwd.getModel().getGlobe().computePointFromPosition(new Position(sunPos, 0)).normalize3();
+            Vec4 sunvar = wwd.getModel().getGlobe().computePointFromPosition(new Position(sunPos, 0)).normalize3();
 
-            Vec4 light = sun.getNegative3();
+            Vec4 light = sunvar.getNegative3();
             this.tessellator.setLightDirection(light);
-            this.lensFlareLayer.setSunDirection(sun);
+            this.lensFlareLayer.setSunDirection(sunvar);
             //Already an atmosphere layer!
-            //this.atmosphereLayer.setSunDirection(sun);
+            atmosphereLayer.setSunDirection(sunvar);
             // Redraw if needed
             if(redraw)
             {
@@ -895,7 +855,7 @@ public void addCustomSat(String name)
                 Layer l = wwd.getModel().getLayers().get(i);
                 if(l instanceof SkyGradientLayer)
                 {
-//                    wwd.getModel().getLayers().set(i, this.atmosphereLayer);
+                    wwd.getModel().getLayers().set(i, this.atmosphereLayer);
                 }
             }
         }
@@ -1050,4 +1010,140 @@ public void addCustomSat(String name)
         GregorianCalendar gc = Time.convertJD2Calendar(julianDate);
         setTime(gc.getTimeInMillis());        
     }
+
+    private void animateApplet(boolean b) {
+        if (b)
+        {
+        //Hard Coded play scenario
+        double date = this.getCurrentJulTime();
+        double currentMJDtime = date - AstroConst.JDminusMJD;
+        double deltaTT2UTC = Time.deltaT(currentMJDtime); // = TT - UTC
+        Vector<StateVector> ephemeris = satHash.get(input.getSatelliteName(input.getSize()-1)).getEphemeris();
+        final double maxTime =  ephemeris.get( ephemeris.size()-1).state[0] - deltaTT2UTC;
+        System.out.println(maxTime);
+        
+        playTimer = new Timer(animationRefreshRateMs, new ActionListener()
+                {
+                @Override
+                    public void actionPerformed(ActionEvent event)
+                    {
+                    // take one time step in the animation
+                    currentPlayDirection = 1;
+                    updateTime(); // animate
+                    long stopTime = System.currentTimeMillis();
+
+                    fpsAnimation = 2.0 / ((stopTime-lastFPSms)/1000.0); // fps calculation
+                    lastFPSms = stopTime;
+                    // goal FPS:
+                    //fpsAnimation = 1.0 / (animationRefreshRateMs/1000.0);
+                            if(getCurrentJulianTime()==maxTime-animationSimStepSeconds)
+                            {
+                                playTimer.stop();
+                            }
+                    }
+                });
+        playTimer.start();
+        
+//        System.out.println("All done ");
+//        System.out.println(this.getCurrentJulTime());
+    }
+        else
+        {
+    playTimer.stop();
+    }}
+    
+    @Override
+public void actionPerformed(ActionEvent e)
+{
+    if(play)
+    {
+        playScenario.setText("Pause");
+        animateApplet(true);
+        play = false;
+    }
+    else
+    {
+        playScenario.setText("Play");
+        animateApplet(false);
+        play = true;
+    }
+}
+
+public double getCurrentJulianTime()
+{
+    return this.getCurrentJulTime();
+}
+public void WWsetMJD(double mjd)
+    {
+               
+        if(viewModeECI)
+        {
+//            // Hmm need to do something to keet the ECI view moving even after user interaction
+//            // seems to work after you click off globe after messing with it
+//            // this fixes the problem:
+//            wwd.getView().stopStateIterators();
+            wwd.getView().stopMovement(); //seems to fix prop in v0.5
+//            
+//            // update rotation of view and Stars
+            double theta0 = eciLayer.getRotateECIdeg();
+//
+            // UPDATE TIME
+            eciLayer.setCurrentMJD(mjd);
+//
+            double thetaf = eciLayer.getRotateECIdeg(); // degrees
+//
+//            // move view
+//
+//            //Quaternion q0 = ((BasicOrbitView) wwd.getView()).getRotation();
+//            //Vec4 vec = ((BasicOrbitView) wwd.getView()).getEyePoint();
+//            
+//            //Position pos = ((BasicOrbitView) wwd.getView()).getCurrentEyePosition();
+            Position pos = ((BasicOrbitView) wwd.getView()).getCenterPosition(); // WORKS
+//            
+//            // amount to rotate the globe (degrees) around poles axis
+            double rotateEarthDelta = thetaf - theta0; // deg
+//
+//            //Quaternion q = Quaternion.fromRotationYPR(Angle.fromDegrees(0), Angle.fromDegrees(rotateEarthDelta), Angle.fromDegrees(0.0));
+//            // rotate the earth around z axis by rotateEarthDelta
+//            //double[][] rz = MathUtils.R_z(rotateEarthDelta*Math.PI/180);
+//            //double[] newEyePos = MathUtils.mult(rz, new double[] {vec.x,vec.y,vec.z});
+////            Angle newLon = pos.getLongitude().addDegrees(-rotateEarthDelta);
+////            Position newPos = new Position(pos.getLatitude(),newLon,pos.getElevation());
+//            
+//            //Position newPos = pos.add(new Position(Angle.fromDegrees(0),Angle.fromDegrees(-rotateEarthDelta),0.0));
+            Position newPos = pos.add(new Position(Angle.fromDegrees(0),Angle.fromDegrees(-rotateEarthDelta),0.0)); // WORKS
+//            
+//            // rotation in 3D space is "added" to the quaternion by quaternion multiplication
+////            try // try around it to prevent problems when running the simulation and then opening a new 3D window (this is called before the wwj is initalized)
+////            {
+//                //((BasicOrbitView) wwd.getView()).setRotation(q0.multiply(q));
+//            // BUG -- ALWATS REORIENTS VIEW TO NORTH UP AND NO TILT!  -- fixed 15  Jul 2008 SEG
+//                //((BasicOrbitView) wwd.getView()).setEyePosition(newPos);
+               ((BasicOrbitView) wwd.getView()).setCenterPosition(newPos); // WORKS  -- fixed 15  Jul 2008 SEG
+////            }
+////            catch(Exception e)
+////            {
+////                // do nothing, it will catch up next update
+////            }
+//
+            // star layer
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+//            
+        } // if ECI
+        else
+        {
+            // EFEC - just update time
+            eciLayer.setCurrentMJD(mjd);
+            
+            // star layer
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+        }
+        
+        // debug - reset view to follow sat
+        //setViewCenter(15000000); // set this only if user has picked a satellite to follow!
+
+        // update layer that needs time updates
+        timeDepLayer.setCurrentMJD(mjd);
+        
+    } // set MJD
 }
