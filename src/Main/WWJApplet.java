@@ -36,6 +36,7 @@ import View.*;
 import gov.nasa.worldwind.view.orbit.BasicOrbitView;
 import java.util.GregorianCalendar;
 import Utilities.OnlineInput;
+import TwoDImage.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -70,7 +71,7 @@ public class WWJApplet extends JApplet
     
     //Time!
     Time currentJulianDate = new Time(); // current sim or real time (Julian Date)
-    double time;
+    double time = 0;
     
     // date formats for displaying and reading in
     private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss.SSS z");
@@ -165,6 +166,8 @@ public class WWJApplet extends JApplet
     int stepNumber = 3;
     
     BasicOrbitViewLimits limits;
+    
+    JInternalFrame twoDpanel;
     
     public WWJApplet()
     {       
@@ -314,7 +317,7 @@ public class WWJApplet extends JApplet
             statusDisplay = new JTextField("Status: ");
             statusDisplay.setText("Running");
             toolbar.add(statusDisplay);
-
+            
             //Remove original Stars Layer
             m.getLayers().remove(0);
             
@@ -386,9 +389,9 @@ public class WWJApplet extends JApplet
 //            // create Moon object
 //            moon = new Moon();
 //            Moon.MoonPosition(currentJulianDate.getMJD());
+            
+            //Read satellites
             try{
-            
-            
             input = new OnlineInput("http://localhost:8080/parameters.html");
             int n = input.getSize();
             for (int i = 0; i <n; i++)
@@ -396,6 +399,7 @@ public class WWJApplet extends JApplet
                 addCustomSat(input.getSatelliteName(i));
             }
             StkEphemerisReader reader = new StkEphemerisReader();
+            double tempTime = 0;
             for (int i = 0; i <n; i++)
             {	
                     AbstractSatellite S = satHash.get(input.getSatelliteName(i));
@@ -431,6 +435,11 @@ public class WWJApplet extends JApplet
                             S.setSatColor(Color.ORANGE);
                     }
                     vector = reader.readStkEphemeris(input.getEphemerisLocation(i));
+                    tempTime = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
+                    if(tempTime > time)
+                    {
+                        time = tempTime;
+                    }
                     S.setEphemeris(vector);
                     // set default 3d model and turn on the use of 3d models
 //                    S.setThreeDModelPath("globalstar/Globalstar.3ds");
@@ -443,10 +452,9 @@ public class WWJApplet extends JApplet
                     {
                             //dont do anything!
                     }
-                    time = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
-                    setTime(time);
-                    statusDisplay.setText("Satellites Added");
             }
+            setTime(time);
+            statusDisplay.setText("Satellites Added");
             }
             catch(Exception e)
             {statusDisplay.setText("No satellites found");
@@ -489,7 +497,7 @@ public class WWJApplet extends JApplet
             //ALREADY HAVE AN ATMOSPHERE LAYER (Its just not working)
             // Replace sky gradient with this atmosphere layer when using sun shading
             this.atmosphereLayer = new AtmosphereLayer();
-            m.getLayers().add(4,this.atmosphereLayer);
+            //m.getLayers().add(4,this.atmosphereLayer);
             //insertBeforeLayerName(this.wwd,this.atmosphereLayer,"Labels");
             
             // Add lens flare layer
@@ -587,6 +595,8 @@ public class WWJApplet extends JApplet
 
             // Setup a select listener for the worldmap click-and-go feature
             this.wwd.addSelectListener(new ClickAndGoSelectListener(this.wwd, WorldMapLayer.class));
+            
+            twoDpanel = createNew2dWindow(Content);
             
             updateTime(); // update plots
             System.out.print(this.getCurrentJulTime() + "\n");
@@ -863,6 +873,7 @@ public class WWJApplet extends JApplet
     {
         this.update(false);
         wwd.redraw();
+        //twoDpanel.repaint();
     }// forceRepainting
      
 public void addCustomSat(String name)
@@ -1152,7 +1163,7 @@ public void addCustomSat(String name)
         double deltaTT2UTC = Time.deltaT(currentMJDtime); // = TT - UTC
         double maxTempTime = 0;
         //Find the very last time in the very last ephemeris
-        for (int i = 1; i<input.getSize(); i++ )
+        for (int i = 1; i<=input.getSize(); i++ )
         {
             Vector<StateVector> ephemeris = satHash.get(input.getSatelliteName(i-1)).getEphemeris();
             double tempTime = ephemeris.get(ephemeris.size()-1).state[0] - deltaTT2UTC;
@@ -1369,4 +1380,34 @@ public void WWsetMJD(double mjd)
         timeDepLayer.setCurrentMJD(mjd);
         
     } // set MJD
+
+ public JInternalFrame createNew2dWindow(Container content)
+    {
+        
+        // create 2D Earth Panel:
+        //J2DEarthPanel newPanel = new J2DEarthPanel(satHash);
+        J2DEarthPanel newPanel = new J2DEarthPanel(satHash, currentJulianDate, sun);
+
+        String windowName = "2D Earth Window";
+        newPanel.setName(windowName);
+
+        // create new internal frame window
+        JInternalFrame iframe = new JInternalFrame(windowName, true, true, true, true);
+
+        iframe.setContentPane(newPanel);
+        iframe.setSize(600, 350);
+        iframe.setLocation(5, 500);
+
+        iframe.setVisible(true);
+        content.add(iframe, BorderLayout.SOUTH);
+        try
+        {
+            iframe.setSelected(true);
+        } 
+        catch (java.beans.PropertyVetoException e)
+        {
+        }
+
+        return iframe; // return it if the user wants to set properties
+    }
 }
