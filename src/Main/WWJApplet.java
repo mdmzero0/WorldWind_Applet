@@ -141,6 +141,9 @@ public class WWJApplet extends JApplet
     
     //Satellite input
     OnlineInput input;
+    private boolean play = true;
+    private boolean inputSat = true;
+    private boolean end = false;
     
     //Buttons
     JButton playScenario;
@@ -150,10 +153,12 @@ public class WWJApplet extends JApplet
     JButton stepSizeDown;
     JRadioButton ECIon;
     JRadioButton ECEFon;
-    private boolean play = true;
     JToolBar toolbar; 
     JTextField dateDisplay;
     JTextField stepDisplay;
+    JToolBar statusBar;
+    JTextField statusDisplay;
+    JLabel stepSizeLabel;
     
     //Step sizes
     double[] steps = new double[] {1, 10, 30, 60, 120, 300, 1800, 3600, 7200, 86400};
@@ -236,6 +241,11 @@ public class WWJApplet extends JApplet
                 resetButtonActionPerformed(evt);
             }}));
             toolbar.add(resetScenario);
+                        
+            //Step size label
+            stepSizeLabel = new JLabel();
+            stepSizeLabel.setText("Step Size: ");
+            toolbar.add(stepSizeLabel);
             
             //Increase step size
             stepSizeUp = new JButton("+");
@@ -246,9 +256,10 @@ public class WWJApplet extends JApplet
                 stepUpButtonActionPerformed(evt);
             }}));
             toolbar.add(stepSizeUp);
-            
+
             //Step size display
             stepDisplay = new JTextField();
+            stepDisplay.setSize(50, 10);
             stepDisplay.setText("" + animationSimStepSeconds);
             stepDisplay.addActionListener((new java.awt.event.ActionListener() {
                 @Override
@@ -280,7 +291,7 @@ public class WWJApplet extends JApplet
             
             //ECEF Button
             ECEFon = new JRadioButton("ECEF");
-            ECEFon.setBounds(30,30,70,30);
+            ECEFon.setBounds(30,30,50,30);
             ECEFon.setSelected(true);
             ECEFon.addActionListener((new java.awt.event.ActionListener() {
                 @Override
@@ -298,6 +309,11 @@ public class WWJApplet extends JApplet
             dateDisplay = new JTextField("Date/Time");
             dateDisplay.setText( currentJulianDate.getDateTimeStr() );
             toolbar.add(dateDisplay);
+            
+            //Add error/status display
+            statusDisplay = new JTextField("Status: ");
+            statusDisplay.setText("Running");
+            toolbar.add(statusDisplay);
 
             //Remove original Stars Layer
             m.getLayers().remove(0);
@@ -421,7 +437,7 @@ public class WWJApplet extends JApplet
 //                    S.setUse3dModel(true);
                     if (input.getModelCentered(i))
                     {
-                           errorBox("Can't do that yet!");
+                           statusDisplay.setText("Can't do that yet!");
                     }
                     else
                     {
@@ -429,10 +445,13 @@ public class WWJApplet extends JApplet
                     }
                     time = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
                     setTime(time);
+                    statusDisplay.setText("Satellites Added");
             }
             }
             catch(Exception e)
-            {errorBox("No satellites found");}
+            {statusDisplay.setText("No satellites found");
+            inputSat = false;
+            currentJulianDate.update2CurrentTime();}
           //OLD SATELLITE READING METHOD  
 //            CustomSatellite satellite = new CustomSatellite("Test",currentJulianDate);
 //            StkEphemerisReader reader = new StkEphemerisReader();
@@ -1028,7 +1047,7 @@ public void addCustomSat(String name)
 
             if(!satHash.containsKey(modelViewString))
             {
-                System.out.println("NO Current Satellite Selected, can't switch to Model Mode: " + modelViewString);
+                statusDisplay.setText("No Current Satellite Selected, can't switch to Model Mode: " + modelViewString);
                 return;
             }
 
@@ -1126,6 +1145,7 @@ public void addCustomSat(String name)
     private void animateApplet(boolean b) {
         if (b)
         {
+        statusDisplay.setText("Scenario Running");
         //Hard Coded play scenario
         double date = this.getCurrentJulTime();
         double currentMJDtime = date - AstroConst.JDminusMJD;
@@ -1156,6 +1176,7 @@ public void addCustomSat(String name)
                         {
                             playTimer.stop();
                             play = true;
+                            statusDisplay.setText("End of Scenario");
                         }
                     // take one time step in the animation
                     currentPlayDirection = 1;
@@ -1170,18 +1191,23 @@ public void addCustomSat(String name)
             {}
             else
             {playTimer.stop();
-            play = true;}
+            play = true;
+            end = true;
+            statusDisplay.setText("End of Scenario");}
         }
     }
     
 
 public void playButtonActionPerformed(ActionEvent e)
 {
-    if(play)
+    if(play && inputSat)
     {
         animateApplet(true);
         play = false;
     }
+    else if(end)
+    {}
+    
 }
 
 public void pauseButtonActionPerformed(ActionEvent e)
@@ -1191,26 +1217,33 @@ public void pauseButtonActionPerformed(ActionEvent e)
     else
     {
         animateApplet(false);
+        statusDisplay.setText("Scenario Paused");
         play = true; 
     }
 }
 public void resetButtonActionPerformed(ActionEvent e)
 {
+
     animateApplet(false);
     play = true;
-    setTime(time);    
+    statusDisplay.setText("Scenario Reset");
+    if(inputSat)
+    {setTime(time);}
+    else
+    {currentJulianDate.update2CurrentTime();}
 }
 public void stepUpButtonActionPerformed(ActionEvent e)
 {
     if(stepNumber == steps.length-1)
     {
-            //Already max!
+            statusDisplay.setText("Maximum Step Size Reached");
     }
     else
     {
     animationSimStepSeconds = steps[stepNumber+1];
     stepNumber = stepNumber+1;
-    stepDisplay.setText("Step Size (Seconds): " + animationSimStepSeconds);
+    stepDisplay.setText("" +animationSimStepSeconds);
+    statusDisplay.setText("Step Size Increased");
     }
 }
 public void stepDownButtonActionPerformed(ActionEvent e)
@@ -1219,20 +1252,23 @@ public void stepDownButtonActionPerformed(ActionEvent e)
     {
     animationSimStepSeconds = steps[stepNumber-1];
     stepNumber = stepNumber-1;
-    stepDisplay.setText("Step Size (Seconds): " + animationSimStepSeconds);
+    stepDisplay.setText("" + animationSimStepSeconds);
+    statusDisplay.setText("Step Size Decreased");
     }
     else
     {
-        //Already min!
+        statusDisplay.setText("Minimum Step Size Reached");
     }
 }
 public void eciButtonActionPerformed(ActionEvent e)
 {
     viewModeECI = true;
+    statusDisplay.setText("Earth Centered Inertial View");
 }
 public void ecefButtonActionPerformed(ActionEvent e)
 {
     viewModeECI = false;
+    statusDisplay.setText("Earth Centered Earth Fixed View");
 }
 public void stepDisplayActionPerformed(ActionEvent e)
 {
@@ -1247,11 +1283,12 @@ public void stepDisplayActionPerformed(ActionEvent e)
     catch(Exception oops)
     {
         successStep = false;
-        System.out.println("Improper step size");
+        statusDisplay.setText("Improper step size");
     }
     if(successStep)
     {
         animationSimStepSeconds = tempStep;
+        statusDisplay.setText("Step Size Changed");
     }
 }
 
@@ -1332,11 +1369,4 @@ public void WWsetMJD(double mjd)
         timeDepLayer.setCurrentMJD(mjd);
         
     } // set MJD
-
-public void errorBox(String error)
-{
-    JFrame errorFrame = new JFrame("Error");
-    Container Content = this.getContentPane();
-    Content.add(errorFrame);
-}
 }
