@@ -108,7 +108,7 @@ public class WWJApplet extends JApplet
     
     //Stuff from J3DEarthPanel
     ECIRenderableLayer eciLayer; // ECI layer for plotting in ECI coordinates
-    ECEFRenderableLayer ecefLayer; // ECEF layer for plotting in ECEF coordinates
+//    ECEFRenderableLayer ecefLayer; // ECEF layer for plotting in ECEF coordinates
     EcefTimeDepRenderableLayer timeDepLayer;
     OrbitModelRenderable orbitModel; // renderable object for plotting
     ECEFModelRenderable ecefModel;
@@ -223,8 +223,8 @@ public class WWJApplet extends JApplet
 //            insertBeforeLayerName(this.wwd, this.labelsLayer, "Compass");
             
             // add EcefTimeDepRenderableLayer layer
-//            timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD(),sun);
-//            m.getLayers().add(timeDepLayer);
+            timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD());
+            m.getLayers().add(timeDepLayer);
             //insertBeforeLayerName(this.wwd,timeDepLayer,"Labels");*/
             
             // add ECI Layer -- FOR SOME REASON IF BEFORE EFEF and turned off ECEF Orbits don't show up!! Coverage effecting this too, strange
@@ -243,13 +243,13 @@ public class WWJApplet extends JApplet
 //            Layer uhh = m.getLayers().getLayerByName("Political Boundaries");
 //            m.getLayers().remove(uhh);     
             
-            // add ECEF Layer
-            ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
-            ecefModel = new ECEFModelRenderable(satHash, wwd.getModel().getGlobe());
-            ecefLayer.addRenderable(ecefModel); // add renderable object
-            ecefLayer.setEnabled(false);
-            m.getLayers().add(ecefLayer); // add ECEF Layer
-            //insertBeforeLayerName(this.wwd,ecefLayer,"Labels");
+//            // add ECEF Layer
+//            ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
+//            ecefModel = new ECEFModelRenderable(satHash, wwd.getModel().getGlobe());
+//            ecefLayer.addRenderable(ecefModel); // add renderable object
+//            ecefLayer.setEnabled(false);
+//            m.getLayers().add(ecefLayer); // add ECEF Layer
+//            //insertBeforeLayerName(this.wwd,ecefLayer,"Labels");
             
             RenderableLayer latLongLinesLayer = createLatLongLinesLayer();
             latLongLinesLayer.setName("Lat/Long Lines");
@@ -298,7 +298,7 @@ public class WWJApplet extends JApplet
             {
             // Use normal/shading tessellator
             // sun shading needs this
-            Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
+//            Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
             
             //ALREADY HAVE AN ATMOSPHERE LAYER (Its just not working)
             // Replace sky gradient with this atmosphere layer when using sun shading
@@ -389,7 +389,7 @@ public class WWJApplet extends JApplet
                     }
             });
 
-            setSunShadingOn(true); // enable sun shading by default
+//            setSunShadingOn(true); // enable sun shading by default
             // END Sun Shading -------------
             
 //            this.twoDpanel = createNew2dWindow();
@@ -535,76 +535,7 @@ public class WWJApplet extends JApplet
             // Setup a select listener for the worldmap click-and-go feature
             this.wwd.addSelectListener(new ClickAndGoSelectListener(this.wwd, WorldMapLayer.class));
             
-                        //Read satellites
-            try{
-            input = new OnlineInput("http://localhost:8080/parameters.html");
-            int n = input.getSize();
-            for (int i = 0; i <n; i++)
-            {
-                addCustomSat(input.getSatelliteName(i));
-            }
-            StkEphemerisReader reader = new StkEphemerisReader();
-            double tempTime;
-            for (int i = 0; i <n; i++)
-            {	
-                    AbstractSatellite S = satHash.get(input.getSatelliteName(i));
-                    S.setGroundTrackIni2False();
-                    S.setPlot2DFootPrint(false);
-                    S.setShow3DFootprint(false);
-                    if (input.getColor(i).startsWith("b"))
-                    {
-                            S.setSatColor(Color.BLUE);
-                    }
-                    else if (input.getColor(i).startsWith("g"))
-                    {
-                            S.setSatColor(Color.GREEN);
-                    }
-                    else if (input.getColor(i).startsWith("r"))
-                    {
-                            S.setSatColor(Color.RED);
-                    }
-                    else if (input.getColor(i).startsWith("y"))
-                    {
-                            S.setSatColor(Color.YELLOW);
-                    }
-                    else if (input.getColor(i).startsWith("w"))
-                    {
-                            S.setSatColor(Color.WHITE);
-                    }
-                    else if (input.getColor(i).startsWith("p"))
-                    {
-                            S.setSatColor(Color.PINK);
-                    }
-                    else if (input.getColor(i).startsWith("o"))
-                    {
-                            S.setSatColor(Color.ORANGE);
-                    }
-                    vector = reader.readStkEphemeris(input.getEphemerisLocation(i));
-                    tempTime = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
-                    if(tempTime < time)
-                    {
-                        time = tempTime;
-                    }
-                    S.setEphemeris(vector);
-                    // set default 3d model and turn on the use of 3d models
-//                    S.setThreeDModelPath("globalstar/Globalstar.3ds");
-//                    S.setUse3dModel(true);
-                    if (input.getModelCentered(i))
-                    {
-                           statusDisplay.setText("Can't do that yet!");
-                    }
-                    else
-                    {
-                            //dont do anything!
-                    }
-            }
-            setTime(time);
-            statusDisplay.setText("Satellites Added");
-            }
-            catch(Exception e)
-            {statusDisplay.setText("No satellites found");
-            inputSat = false;
-            currentJulianDate.update2CurrentTime();}            //Read satellites
+            //Read satellites
             try{
             input = new OnlineInput("http://localhost:8080/parameters.html");
             int n = input.getSize();
@@ -674,7 +605,6 @@ public class WWJApplet extends JApplet
             {statusDisplay.setText("No satellites found");
             inputSat = false;
             currentJulianDate.update2CurrentTime();}
-            
             updateTime(); // update plots
             //System.out.print(this.getCurrentJulTime() + "\n");
             
@@ -957,7 +887,9 @@ public class WWJApplet extends JApplet
         twoDpanel.repaint();
         }
         catch(Exception e)
-        {System.out.println("Didn't work");}
+        {//System.out.println("Didn't work");
+            
+        }
     }// forceRepainting
      
 public void addCustomSat(String name)
