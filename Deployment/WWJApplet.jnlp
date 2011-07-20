@@ -20,14 +20,12 @@
               max-heap-size="512m"/>
         <property name="sun.java2d.noddraw" value="true"/>
         <jar href="wwapp.jar" main="true"/>
-		<jar href="worldwind.jar"/>
 		<jar href="jogl.jar"/>
 		<jar href="gluegen-rt.jar"/>
 		<jar href="plugin.jar"/>
+        <jar href="worldwind.jar"/>
 		<jar href="gdal.jar"/>
-
-        <extension name="jogl"
-                   href="http://download.java.net/media/jogl/builds/archive/jsr-231-webstart-current/jogl.jnlp"/>
+        <extension name="jogl" href="http://download.java.net/media/jogl/builds/archive/jsr-231-webstart-current/jogl.jnlp"/> 
      </resources>
      <!-- Width and height are overwritten by the surrounding web page -->
      <applet-desc

@@ -45,6 +45,7 @@ import gov.nasa.worldwind.layers.placename.*;
 import gov.nasa.worldwind.layers.Earth.*;
 import Utilities.AstroConst;
 import javax.swing.Timer;
+import com.sun.opengl.util.JOGLAppletLauncher;
 
 /**
  * Provides a base application framework for simple WorldWind applets.
@@ -66,8 +67,8 @@ public class WWJApplet extends JApplet
      * Also adding: Hashtable for satellites
      */
     // Sun object
-    private Sun sun;
-    private Moon moon;
+//    private Sun sun;
+//    private Moon moon;
     
     //Time!
     Time currentJulianDate = new Time(); // current sim or real time (Julian Date)
@@ -113,7 +114,7 @@ public class WWJApplet extends JApplet
     ECEFModelRenderable ecefModel;
     
     private boolean viewModeECI = true; // view mode - ECI (true) or ECEF (false)
-    StarsLayer starsLayer = new StarsLayer();
+//    StarsLayer starsLayer = new StarsLayer();
     
     // view mode options
     private boolean modelViewMode = false; // default false
@@ -128,11 +129,11 @@ public class WWJApplet extends JApplet
     ViewControlsLayer viewControlsLayer;
 
     // sun shader
-    private RectangularNormalTessellator tessellator;
-    private LensFlareLayer lensFlareLayer;
-    private AtmosphereLayer atmosphereLayer;
-    private SunPositionProvider spp;
-    private boolean sunShadingOn = false; // controls if sun shading is used
+//    private RectangularNormalTessellator tessellator;
+//    private LensFlareLayer lensFlareLayer;
+//    private AtmosphereLayer atmosphereLayer;
+//    private SunPositionProvider spp;
+//    private boolean sunShadingOn = false; // controls if sun shading is used
 
     // ECI grid
     private ECIRadialGrid eciRadialGrid = new ECIRadialGrid();
@@ -173,6 +174,8 @@ public class WWJApplet extends JApplet
     Container Content = this.getContentPane();
     private boolean twoDon = false;
     
+    private boolean sunCompat = true;
+    
     public WWJApplet()
     {       
     }
@@ -183,6 +186,7 @@ public class WWJApplet extends JApplet
         Vector<StateVector> vector;
         try
         {
+            //JOGLAppletLauncher launch = new JOGLAppletLauncher();
             // Check for initial configuration values
             String value = getParameter("InitialLatitude");
             if (value != null)
@@ -202,9 +206,6 @@ public class WWJApplet extends JApplet
 
               Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
 
-             // Use normal/shading tessellator
-            // sun shading needs this
-            Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
 
             // Create World Window GL Canvas
             this.wwd = new WorldWindowGLCanvas();
@@ -214,7 +215,7 @@ public class WWJApplet extends JApplet
             this.wwd.setModel(m);
             
             //Remove original Stars Layer
-            m.getLayers().remove(0);
+//            m.getLayers().remove(0);
             
 //            // Add a renderable layer for application labels
 //            this.labelsLayer = new RenderableLayer();
@@ -222,8 +223,8 @@ public class WWJApplet extends JApplet
 //            insertBeforeLayerName(this.wwd, this.labelsLayer, "Compass");
             
             // add EcefTimeDepRenderableLayer layer
-            timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD(),sun);
-            m.getLayers().add(timeDepLayer);
+//            timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD(),sun);
+//            m.getLayers().add(timeDepLayer);
             //insertBeforeLayerName(this.wwd,timeDepLayer,"Labels");*/
             
             // add ECI Layer -- FOR SOME REASON IF BEFORE EFEF and turned off ECEF Orbits don't show up!! Coverage effecting this too, strange
@@ -236,11 +237,11 @@ public class WWJApplet extends JApplet
             m.getLayers().add(0,eciLayer); // add ECI Layer
             //insertBeforeLayerName(this.wwd,eciLayer, "Labels");
             
-            CountryBoundariesLayer country = new CountryBoundariesLayer();
-            country.setEnabled(false);
-            m.getLayers().add(country); 
-            Layer uhh = m.getLayers().getLayerByName("Political Boundaries");
-            m.getLayers().remove(uhh);     
+//            CountryBoundariesLayer country = new CountryBoundariesLayer();
+//            country.setEnabled(false);
+//            m.getLayers().add(country); 
+//            Layer uhh = m.getLayers().getLayerByName("Political Boundaries");
+//            m.getLayers().remove(uhh);     
             
             // add ECEF Layer
             ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
@@ -280,35 +281,43 @@ public class WWJApplet extends JApplet
             scenarioEpochDate.setDateFormat(dateformat);
             
             // create Sun object
-            sun = new Sun(currentJulianDate.getMJD());
+//            sun = new Sun(currentJulianDate.getMJD());
 //            // create Moon object
 //            moon = new Moon();
 //            Moon.MoonPosition(currentJulianDate.getMJD());        
             
             //FIX FOR TRANSPARENT EARTH PROBLEM: Remove old star layer and add new star layer.
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+//            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
             //insertBeforeLayerName(this.wwd,starsLayer,"View Controls");
-            m.getLayers().add(0,starsLayer);
+//            m.getLayers().add(0,starsLayer);
             
             // set the sun provider to the shader
-            spp = new CustomSunPositionProvider(sun);
+//            spp = new CustomSunPositionProvider(sun);
 
+            try
+            {
+            // Use normal/shading tessellator
+            // sun shading needs this
+            Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
+            
             //ALREADY HAVE AN ATMOSPHERE LAYER (Its just not working)
             // Replace sky gradient with this atmosphere layer when using sun shading
-            this.atmosphereLayer = new AtmosphereLayer();
+//            this.atmosphereLayer = new AtmosphereLayer();
             //m.getLayers().add(4,this.atmosphereLayer);
             //insertBeforeLayerName(this.wwd,this.atmosphereLayer,"Labels");
             
             // Add lens flare layer
-            this.lensFlareLayer = LensFlareLayer.getPresetInstance(LensFlareLayer.PRESET_BOLD);
-            m.getLayers().add(this.lensFlareLayer);
+//            this.lensFlareLayer = LensFlareLayer.getPresetInstance(LensFlareLayer.PRESET_BOLD);
+//            m.getLayers().add(this.lensFlareLayer);
             //insertBeforeLayerName(this.wwd,this.lensFlareLayer,"Labels");
             
             // Get tessellator
-            this.tessellator = (RectangularNormalTessellator)m.getGlobe().getTessellator();
+//            this.tessellator = (RectangularNormalTessellator)m.getGlobe().getTessellator();
             // set default colors for shading
-            this.tessellator.setAmbientColor(new Color(0.50f, 0.50f, 0.50f));
-            
+//            this.tessellator.setAmbientColor(new Color(0.50f, 0.50f, 0.50f));
+            }
+            catch(Exception windows7)
+            {sunCompat = false;}
 //            LayerList WWLayers = m.getLayers();
 //            String TheLayers = WWLayers.toString();
 //            //System.out.println(TheLayers);
@@ -344,20 +353,20 @@ public class WWJApplet extends JApplet
             // save star layer
             if (layer instanceof StarsLayer)
             {
-                starsLayer = (StarsLayer) layer;
+//                starsLayer = (StarsLayer) layer;
                 
                 // for now just enlarge radius by a factor of 10
-                starsLayer.setRadius(starsLayer.getRadius()*10.0);
+//                starsLayer.setRadius(starsLayer.getRadius()*10.0);
             }
             if(layer instanceof CountryBoundariesLayer)
             {
                 ((CountryBoundariesLayer) layer).setEnabled(false); // off by default
             }
-            if(layer instanceof AtmosphereLayer)
-            {
-                atmosphereLayer = (AtmosphereLayer) layer;
-                atmosphereLayer.setEnabled(true);
-            }
+//            if(layer instanceof AtmosphereLayer)
+//            {
+//                atmosphereLayer = (AtmosphereLayer) layer;
+//                atmosphereLayer.setEnabled(true);
+//            }
             } // for layers
             
             //Visualization Tests
@@ -383,7 +392,7 @@ public class WWJApplet extends JApplet
             setSunShadingOn(true); // enable sun shading by default
             // END Sun Shading -------------
             
-            this.twoDpanel = createNew2dWindow();
+//            this.twoDpanel = createNew2dWindow();
             //Content.add(twoDpanel, BorderLayout.CENTER);
             
                         //SET UP GUI
@@ -895,7 +904,7 @@ public class WWJApplet extends JApplet
 //        }
         currentJulianDate.addSeconds( currentPlayDirection*animationSimStepSeconds );
         // update sun position
-        sun.setCurrentMJD(currentJulianDate.getMJD());
+//        sun.setCurrentMJD(currentJulianDate.getMJD());
                 
         // if time jumps by more than 91 minutes check period of sat to see if
         // ground tracks need to be updated
@@ -1035,66 +1044,72 @@ public void addCustomSat(String name)
 // Update worldwind wun shading
     private void update(boolean redraw)
     {
-        if(sunShadingOn) //this.enableCheckBox.isSelected())
-        {
-            // Compute Sun position according to current date and time
-            LatLon sunPos = spp.getPosition();
-            Vec4 sunvar = wwd.getModel().getGlobe().computePointFromPosition(new Position(sunPos, 0)).normalize3();
-
-            Vec4 light = sunvar.getNegative3();
-            this.tessellator.setLightDirection(light);
-            this.lensFlareLayer.setSunDirection(sunvar);
-            //Already an atmosphere layer!
-            atmosphereLayer.setSunDirection(sunvar);
-            // Redraw if needed
-            if(redraw)
-            {
-                wwd.redraw();
-            }
-        } // if sun Shading
+//        if(sunShadingOn) //this.enableCheckBox.isSelected())
+//        {
+//            // Compute Sun position according to current date and time
+//            LatLon sunPos = spp.getPosition();
+//            Vec4 sunvar = wwd.getModel().getGlobe().computePointFromPosition(new Position(sunPos, 0)).normalize3();
+//
+//            Vec4 light = sunvar.getNegative3();
+//            if(sunCompat)
+//            {
+////            this.tessellator.setLightDirection(light);
+//            this.lensFlareLayer.setSunDirection(sunvar);
+//            //Already an atmosphere layer!
+//            atmosphereLayer.setSunDirection(sunvar);
+//            
+//            }
+//            // Redraw if needed
+//            if(redraw)
+//            {
+//                wwd.redraw();
+//            }
+//        } // if sun Shading
         
     } // update - for sun shading
 
     public void setSunShadingOn(boolean useSunShading)
     {
-        if(useSunShading == sunShadingOn)
-        {
-            return; // nothing to do
-        }
-
-        sunShadingOn = useSunShading;
-
-        if(sunShadingOn)
-        {
-            // enable shading - use special atmosphere
-            for(int i = 0; i < wwd.getModel().getLayers().size(); i++)
-            {
-                Layer l = wwd.getModel().getLayers().get(i);
-                if(l instanceof SkyGradientLayer)
-                {
-                    wwd.getModel().getLayers().set(i, this.atmosphereLayer);
-                }
-            }
-        }
-        else
-        {
-            // disable shading
-            // Turn off lighting
-            this.tessellator.setLightDirection(null);
-            this.lensFlareLayer.setSunDirection(null);
-            this.atmosphereLayer.setSunDirection(null);
-
-            // use standard atmosphere
-            for(int i = 0; i < wwd.getModel().getLayers().size(); i++)
-            {
-                Layer l = wwd.getModel().getLayers().get(i);
-                if(l instanceof AtmosphereLayer)
-                {
-                    wwd.getModel().getLayers().set(i, new SkyGradientLayer());
-                }
-            }
-            
-        } // if/else shading
+//        if(useSunShading == sunShadingOn)
+//        {
+//            return; // nothing to do
+//        }
+//
+//        sunShadingOn = useSunShading;
+//
+//        if(sunShadingOn)
+//        {
+//            // enable shading - use special atmosphere
+//            for(int i = 0; i < wwd.getModel().getLayers().size(); i++)
+//            {
+//                Layer l = wwd.getModel().getLayers().get(i);
+//                if(l instanceof SkyGradientLayer)
+//                {
+//                    wwd.getModel().getLayers().set(i, this.atmosphereLayer);
+//                }
+//            }
+//        }
+//        else
+//        {
+//            // disable shading
+//            // Turn off lighting
+//            if(sunCompat)
+//            {
+////            this.tessellator.setLightDirection(null);
+//            this.lensFlareLayer.setSunDirection(null);
+//            this.atmosphereLayer.setSunDirection(null);
+//            }
+//            // use standard atmosphere
+//            for(int i = 0; i < wwd.getModel().getLayers().size(); i++)
+//            {
+//                Layer l = wwd.getModel().getLayers().get(i);
+//                if(l instanceof AtmosphereLayer)
+//                {
+//                    wwd.getModel().getLayers().set(i, new SkyGradientLayer());
+//                }
+//            }
+//            
+//        } // if/else shading
 
         this.update(true); // redraw
     } // setSunShadingOn
@@ -1198,11 +1213,11 @@ public void addCustomSat(String name)
         if(viewModeECI)
         {
             // update stars
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+//            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
         }
         else
         {
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(0.0)); // reset to normal
+//            starsLayer.setLongitudeOffset(Angle.fromDegrees(0.0)); // reset to normal
         }
         
     }
@@ -1469,7 +1484,7 @@ public void WWsetMJD(double mjd)
 ////            }
 //
             // star layer
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+//            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
 //            
         } // if ECI
         else
@@ -1478,7 +1493,7 @@ public void WWsetMJD(double mjd)
             eciLayer.setCurrentMJD(mjd);
             
             // star layer
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+//            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
         }
         
         // debug - reset view to follow sat
@@ -1489,15 +1504,15 @@ public void WWsetMJD(double mjd)
         
     } // set MJD
 
- public J2DEarthPanel createNew2dWindow()
-    {
-        
-        // create 2D Earth Panel:
-        //J2DEarthPanel newPanel = new J2DEarthPanel(satHash);
-        J2DEarthPanel newPanel = new J2DEarthPanel(satHash, currentJulianDate, sun);
-
-        String windowName = "2D Earth Window";
-        newPanel.setName(windowName);
-        return newPanel;
-    }
+// public J2DEarthPanel createNew2dWindow()
+//    {
+//        
+//        // create 2D Earth Panel:
+//        //J2DEarthPanel newPanel = new J2DEarthPanel(satHash);
+////        J2DEarthPanel newPanel = new J2DEarthPanel(satHash, currentJulianDate, sun);
+//
+//        String windowName = "2D Earth Window";
+////        newPanel.setName(windowName);
+////        return newPanel;
+//    }
 }
