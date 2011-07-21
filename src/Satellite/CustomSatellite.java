@@ -85,9 +85,9 @@ public class CustomSatellite  extends AbstractSatellite
     
     // ground track options  -- grounds tracks draw to asending nodes, re-calculated at acending nodes
     boolean showGroundTrack = true;
-    private int grnTrkPointsPerPeriod = 121; // equally space in time >=2
-    private double groundTrackLeadPeriodMultiplier = 2.0;  // how far forward to draw ground track - in terms of periods
-    private double groundTrackLagPeriodMultiplier = 1.0;  // how far behind to draw ground track - in terms of periods
+    private int grnTrkPointsPerPeriod = 150; // equally space in time >=2
+    private double groundTrackLeadPeriodMultiplier = 1;  // how far forward to draw ground track - in terms of periods
+    private double groundTrackLagPeriodMultiplier = 1;  // how far behind to draw ground track - in terms of periods
     
     double[][] latLongLead; // leading lat/long coordinates for ground track
     double[][] latLongLag; // lagging lat/long coordinates for ground track
