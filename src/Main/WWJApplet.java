@@ -59,11 +59,13 @@ public class WWJApplet extends JApplet
     protected WorldWindowGLCanvas wwd;
     protected RenderableLayer labelsLayer;
     private ViewControlsLayer viewControlsLayer;
+    private Model m;
     
     private Sun sun;
     private SunPositionProvider spp;
     private boolean sunShadingOn = false; // controls if sun shading is used
     private StarsLayer starsLayer;
+    private LensFlareLayer lensFlareLayer;
     
     //Making ECI/ECEF Layer
     private ECIRenderableLayer eciLayer;
@@ -158,106 +160,10 @@ public class WWJApplet extends JApplet
             this.getContentPane().add(this.wwd, BorderLayout.CENTER);
 
             // Create the default model as described in the current worldwind properties.
-            Model m = (Model) WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME);
+            m = (Model) WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME);
             this.wwd.setModel(m);
-
-            // Add a renderable layer for application labels
-            this.labelsLayer = new RenderableLayer();
-            this.labelsLayer.setName("Labels");
-            insertBeforeLayerName(this.wwd, this.labelsLayer, "Compass");
-
-            //Add the view controls layer
-            viewControlsLayer = new ViewControlsLayer();
-            viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
-            viewControlsLayer.setScale(6/10d);
-            viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
-            viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
-            viewControlsLayer.setEnabled(true); // turn off by default
-            viewControlsLayer.setShowVeControls(false);
-            m.getLayers().add(1,viewControlsLayer);
-            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
             
-            // add ECI Layer -- FOR SOME REASON IF BEFORE EFEF and turned off ECEF Orbits don't show up!! Coverage effecting this too, strange
-            eciLayer = new ECIRenderableLayer(currentJulianDate.getMJD()); // create ECI layer
-            orbitModel = new OrbitModelRenderable(satHash, wwd.getModel().getGlobe());
-            eciLayer.addRenderable(orbitModel); // add renderable object
-            eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
-            eciRadialGrid.setShowGrid(false);
-            eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
-            m.getLayers().add(0,eciLayer); // add ECI Layer
-            
-            // add ECEF Layer
-            ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
-            ecefModel = new ECEFModelRenderable(satHash, wwd.getModel().getGlobe());
-            ecefLayer.addRenderable(ecefModel); // add renderable object
-            ecefLayer.setEnabled(false);
-            m.getLayers().add(ecefLayer); // add ECEF Layer
-            
-            // add EcefTimeDepRenderableLayer layer
-            timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD(),sun);
-            m.getLayers().add(timeDepLayer);
-            
-            // Add the status bar
-            StatusBar statusBar = new StatusBar();
-            this.getContentPane().add(statusBar, BorderLayout.PAGE_END);
-
-            // Forward events to the status bar to provide the cursor position info.
-            statusBar.setEventSource(this.wwd);
-
-            // Setup a select listener for the worldmap click-and-go feature
-            this.wwd.addSelectListener(new ClickAndGoSelectListener(this.wwd, WorldMapLayer.class));
-
-            //Add sun and sun position provider
-            sun = new Sun(currentJulianDate.getMJD());
-            spp = new CustomSunPositionProvider(sun);
-            setSunShadingOn(true);       
-            
-             for (Layer layer : m.getLayers())
-            {
-//            if (layer instanceof TiledImageLayer)
-//            {
-//                ((TiledImageLayer) layer).setShowImageTileOutlines(false);
-//            }
-            if (layer instanceof LandsatI3)
-            {
-                ((TiledImageLayer) layer).setDrawBoundingVolumes(false);
-                ((TiledImageLayer) layer).setEnabled(false);
-            }
-            if (layer instanceof CompassLayer)
-            {
-                ((CompassLayer) layer).setShowTilt(true);
-                ((CompassLayer) layer).setEnabled(true);
-            }
-            if (layer instanceof PlaceNameLayer)
-            {
-                ((PlaceNameLayer) layer).setEnabled(false); // off
-            }
-            if (layer instanceof WorldMapLayer)
-            {
-                ((WorldMapLayer) layer).setEnabled(false); // off
-            }
-            if (layer instanceof USGSUrbanAreaOrtho)
-            {
-                ((USGSUrbanAreaOrtho) layer).setEnabled(false); // off
-            }
-            // save star layer
-            if (layer instanceof StarsLayer)
-            {
-                starsLayer = (StarsLayer) layer;
-                
-                // for now just enlarge radius by a factor of 10
-                starsLayer.setRadius(starsLayer.getRadius()*10.0);
-            }
-            if(layer instanceof CountryBoundariesLayer)
-            {
-                ((CountryBoundariesLayer) layer).setEnabled(false); // off by default
-            }
-//            if(layer instanceof AtmosphereLayer)
-//            {
-//                atmosphereLayer = (AtmosphereLayer) layer;
-//                atmosphereLayer.setEnabled(true);
-//            }
-            } // for layers
+            setUpLayers();
             
             // first call to update time to current time:
             currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
@@ -789,7 +695,8 @@ public class WWJApplet extends JApplet
 
             Vec4 light = sunvar.getNegative3();
 //            this.tessellator.setLightDirection(light);
-//            this.lensFlareLayer.setSunDirection(sunvar);
+
+            this.lensFlareLayer.setSunDirection(sunvar);
             //Already an atmosphere layer!
 //            atmosphereLayer.setSunDirection(sunvar);
             // Redraw if needed
@@ -944,6 +851,7 @@ public void threeDButtonActionPerformed(ActionEvent e)
     catch(Exception nopanel)
     {}
     Content.add(wwd, BorderLayout.CENTER);
+    setUpLayers();
     twoDon = false;
     statusDisplay.setText("3D View");
     }
@@ -1214,6 +1122,104 @@ public void WWsetMJD(double mjd)
             starsLayer.setLongitudeOffset(Angle.fromDegrees(0.0)); // reset to normal
         }
         
+    }
+    public void setUpLayers()
+    {
+                    // Add a renderable layer for application labels
+            this.labelsLayer = new RenderableLayer();
+            this.labelsLayer.setName("Labels");
+            insertBeforeLayerName(this.wwd, this.labelsLayer, "Compass");
+
+            //Add the view controls layer
+            viewControlsLayer = new ViewControlsLayer();
+            viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
+            viewControlsLayer.setScale(6/10d);
+            viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
+            viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
+            viewControlsLayer.setEnabled(true); // turn off by default
+            viewControlsLayer.setShowVeControls(false);
+            m.getLayers().add(1,viewControlsLayer);
+            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
+            
+            // add ECI Layer -- FOR SOME REASON IF BEFORE EFEF and turned off ECEF Orbits don't show up!! Coverage effecting this too, strange
+            eciLayer = new ECIRenderableLayer(currentJulianDate.getMJD()); // create ECI layer
+            orbitModel = new OrbitModelRenderable(satHash, wwd.getModel().getGlobe());
+            eciLayer.addRenderable(orbitModel); // add renderable object
+            eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
+            eciRadialGrid.setShowGrid(false);
+            eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
+            m.getLayers().add(0,eciLayer); // add ECI Layer
+            
+            // add ECEF Layer
+            ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
+            ecefModel = new ECEFModelRenderable(satHash, wwd.getModel().getGlobe());
+            ecefLayer.addRenderable(ecefModel); // add renderable object
+            ecefLayer.setEnabled(false);
+            m.getLayers().add(ecefLayer); // add ECEF Layer
+            
+            // add EcefTimeDepRenderableLayer layer
+            timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD(),sun);
+            m.getLayers().add(timeDepLayer);
+            
+            // Add the status bar
+            StatusBar statusBar = new StatusBar();
+            this.getContentPane().add(statusBar, BorderLayout.PAGE_END);
+
+            // Forward events to the status bar to provide the cursor position info.
+            statusBar.setEventSource(this.wwd);
+
+            // Setup a select listener for the worldmap click-and-go feature
+            this.wwd.addSelectListener(new ClickAndGoSelectListener(this.wwd, WorldMapLayer.class));
+
+            //Add sun and sun position provider
+            sun = new Sun(currentJulianDate.getMJD());
+            spp = new CustomSunPositionProvider(sun);
+            // Add lens flare layer
+            this.lensFlareLayer = LensFlareLayer.getPresetInstance(LensFlareLayer.PRESET_BOLD);
+            m.getLayers().add(this.lensFlareLayer);
+            setSunShadingOn(true);       
+            
+             for (Layer layer : m.getLayers())
+            {
+//            if (layer instanceof TiledImageLayer)
+//            {
+//                ((TiledImageLayer) layer).setShowImageTileOutlines(false);
+//            }
+            if (layer instanceof LandsatI3)
+            {
+                ((TiledImageLayer) layer).setDrawBoundingVolumes(false);
+                ((TiledImageLayer) layer).setEnabled(false);
+            }
+            if (layer instanceof CompassLayer)
+            {
+                ((CompassLayer) layer).setShowTilt(true);
+                ((CompassLayer) layer).setEnabled(true);
+            }
+            if (layer instanceof PlaceNameLayer)
+            {
+                ((PlaceNameLayer) layer).setEnabled(false); // off
+            }
+            if (layer instanceof WorldMapLayer)
+            {
+                ((WorldMapLayer) layer).setEnabled(false); // off
+            }
+            if (layer instanceof USGSUrbanAreaOrtho)
+            {
+                ((USGSUrbanAreaOrtho) layer).setEnabled(false); // off
+            }
+            // save star layer
+            if (layer instanceof StarsLayer)
+            {
+                starsLayer = (StarsLayer) layer;
+                
+                // for now just enlarge radius by a factor of 10
+                starsLayer.setRadius(starsLayer.getRadius()*10.0);
+            }
+            if(layer instanceof CountryBoundariesLayer)
+            {
+                ((CountryBoundariesLayer) layer).setEnabled(false); // off by default
+            }
+            } // for layers
     }
 }
 
