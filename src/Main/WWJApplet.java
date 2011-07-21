@@ -163,6 +163,14 @@ public class WWJApplet extends JApplet
             m = (Model) WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME);
             this.wwd.setModel(m);
             
+            //Add sun and sun position provider
+            sun = new Sun(currentJulianDate.getMJD());
+            spp = new CustomSunPositionProvider(sun);
+            // Add lens flare layer
+            this.lensFlareLayer = LensFlareLayer.getPresetInstance(LensFlareLayer.PRESET_BOLD);
+            m.getLayers().add(this.lensFlareLayer);
+            setSunShadingOn(true);       
+            
             setUpLayers();
             
             // first call to update time to current time:
@@ -371,8 +379,31 @@ public class WWJApplet extends JApplet
                             //dont do anything!
                     }
             }
+            double scenarioTime = input.getTime();
+            if(scenarioTime>time)
+            {
+            time = scenarioTime;
             setTime(time);
             statusDisplay.setText("Satellites Added");
+            }
+            else if(scenarioTime == 0.0)
+            {
+                statusDisplay.setText("Incorrect time requested");
+                inputSat = false;
+                currentJulianDate.update2CurrentTime();
+            }
+            else if(satHash.get(n).getEphemeris() == null)
+            {
+                statusDisplay.setText("Requested time not within ephemeris range");
+                time = scenarioTime;
+                setTime(time);
+            }
+            else
+            {
+                statusDisplay.setText("Requested time not within ephemeris range");
+                time = scenarioTime;
+                setTime(time);
+            }
             }
             catch(Exception e)
             {statusDisplay.setText("No satellites found");
@@ -847,6 +878,13 @@ public void threeDButtonActionPerformed(ActionEvent e)
     try
     {
         Content.remove(twoDpanel);
+        timeDepLayer.removeAllRenderables();
+        eciLayer.removeAllRenderables();
+        ecefLayer.removeAllRenderables();
+        m.getLayers().remove(eciLayer);
+        m.getLayers().remove(ecefLayer);
+        m.getLayers().remove(timeDepLayer);
+
     }
     catch(Exception nopanel)
     {}
@@ -1125,7 +1163,7 @@ public void WWsetMJD(double mjd)
     }
     public void setUpLayers()
     {
-                    // Add a renderable layer for application labels
+            // Add a renderable layer for application labels
             this.labelsLayer = new RenderableLayer();
             this.labelsLayer.setName("Labels");
             insertBeforeLayerName(this.wwd, this.labelsLayer, "Compass");
@@ -1170,14 +1208,6 @@ public void WWsetMJD(double mjd)
 
             // Setup a select listener for the worldmap click-and-go feature
             this.wwd.addSelectListener(new ClickAndGoSelectListener(this.wwd, WorldMapLayer.class));
-
-            //Add sun and sun position provider
-            sun = new Sun(currentJulianDate.getMJD());
-            spp = new CustomSunPositionProvider(sun);
-            // Add lens flare layer
-            this.lensFlareLayer = LensFlareLayer.getPresetInstance(LensFlareLayer.PRESET_BOLD);
-            m.getLayers().add(this.lensFlareLayer);
-            setSunShadingOn(true);       
             
              for (Layer layer : m.getLayers())
             {
