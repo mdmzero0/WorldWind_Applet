@@ -45,11 +45,12 @@ public class EcefTimeDepRenderableLayer extends RenderableLayer
     // terminator
     private SunTerminatorPolyLineTimeDep terminator;
 
-    public EcefTimeDepRenderableLayer(double currentMJD)
+    public EcefTimeDepRenderableLayer(double currentMJD, Sun sun)
     {
         super();
 
         this.currentMJD = currentMJD;
+        this.sun = sun;
 
         terminator = new SunTerminatorPolyLineTimeDep(sun);
         if(this.showTerminatorLine)
@@ -143,7 +144,7 @@ public class EcefTimeDepRenderableLayer extends RenderableLayer
     } // setShowTerminatorLine
 
     /**
-     * For setting properties of the terminator line
+     * For seting properties of the terminator line
      * @return the terminator
      */
     public SunTerminatorPolyLineTimeDep getTerminator()
