@@ -81,11 +81,13 @@ public class WWJApplet extends JApplet
     private StkEphemerisReader reader = new StkEphemerisReader();
     private OnlineInput input;
     Vector<JSatTrakTimeDependent> timeDependentObjects = new Vector<JSatTrakTimeDependent>();
+    private boolean orbitShown = true;
     
     private Time currentJulianDate = new Time(); // current sim or real time (Julian Date)
     private Time scenarioEpochDate = new Time();
     double time = 100000000000000.0; //Far too big- used to determine earliest ephemeris time
     private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss.SSS z");
+    double oldTime;
     
     //Animation
     private int currentPlayDirection = 0; //-1 backward, 0 stop, 1 forwards
@@ -98,6 +100,8 @@ public class WWJApplet extends JApplet
     int stepNumber = 3;
     private Timer playTimer;
     private boolean twoDon = false;
+    private boolean nonRealTime = true;
+    double tempStep = 60;
     
     //Buttons
     JButton playScenario;
@@ -115,6 +119,8 @@ public class WWJApplet extends JApplet
     JLabel stepSizeLabel;
     JRadioButton twoDbutton;
     JRadioButton threeDbutton;
+    JCheckBox realTime;
+    JCheckBox orbitTrace;
     
     Container Content = this.getContentPane();
     J2DEarthPanel twoDpanel;
@@ -316,9 +322,28 @@ public class WWJApplet extends JApplet
             statusDisplay.setText("Running");
             toolbar.add(statusDisplay);
             
+            //Add checkboxes
+            realTime = new JCheckBox("Real Time");
+            realTime.setSelected(false);
+            realTime.addActionListener((new java.awt.event.ActionListener(){
+                @Override
+                        public void actionPerformed(java.awt.event.ActionEvent evt){
+                    realTimeActionPerformed(evt);   
+                }}));
+            toolbar.add(realTime); 
+            
+            orbitTrace = new JCheckBox("Orbit Trace");
+            orbitTrace.setSelected(true);
+            orbitTrace.addActionListener((new java.awt.event.ActionListener(){
+                @Override
+                        public void actionPerformed(java.awt.event.ActionEvent evt){
+                    orbitTraceActionPerformed(evt);   
+                }}));
+            toolbar.add(orbitTrace); 
+            
             //Read satellites
             try{
-            input = new OnlineInput("http://localhost:8080/parameters.html");
+            input = new OnlineInput("http://localhost:8080/parameters_test.html");
             int n = input.getSize();
             for (int i = 0; i <n; i++)
             {
@@ -686,7 +711,11 @@ public class WWJApplet extends JApplet
                 tdo.updateTime(currentJulianDate, satHash);
             }
         }
-        WWsetMJD(currentJulianDate.getMJD());        
+        WWsetMJD(currentJulianDate.getMJD());     
+        if(nonRealTime)
+        {
+            oldTime = currentJulianDate.getJulianDate();
+        }
         forceRepainting(); // repaint 2d/3d earth
     } // update time
     public void checkTimeDiffResetGroundTracks(double timeDiffDays)
@@ -799,8 +828,10 @@ public void pauseButtonActionPerformed(ActionEvent e)
     else
     {
         animateApplet(false);
+        realTime.setSelected(false);
         statusDisplay.setText("Scenario Paused");
         play = true; 
+        nonRealTime = true;
     }
 }
 public void resetButtonActionPerformed(ActionEvent e)
@@ -809,6 +840,8 @@ public void resetButtonActionPerformed(ActionEvent e)
     animateApplet(false);
     play = true;
     statusDisplay.setText("Scenario Reset");
+    realTime.setSelected(false);
+    nonRealTime = true;
     if(inputSat)
     {setTime(time);}
     else
@@ -823,6 +856,7 @@ public void stepUpButtonActionPerformed(ActionEvent e)
     else
     {
     animationSimStepSeconds = steps[stepNumber+1];
+    tempStep = animationSimStepSeconds;
     stepNumber = stepNumber+1;
     stepDisplay.setText("" +animationSimStepSeconds);
     statusDisplay.setText("Step Size Increased");
@@ -833,6 +867,7 @@ public void stepDownButtonActionPerformed(ActionEvent e)
     if(stepNumber>0)
     {
     animationSimStepSeconds = steps[stepNumber-1];
+    tempStep = animationSimStepSeconds;
     stepNumber = stepNumber-1;
     stepDisplay.setText("" + animationSimStepSeconds);
     statusDisplay.setText("Step Size Decreased");
@@ -898,7 +933,6 @@ public void stepDisplayActionPerformed(ActionEvent e)
 {
     //Assume it worked
     boolean successStep = true;
-    double tempStep = animationSimStepSeconds;
     try
     {
         String text = stepDisplay.getText();
@@ -913,6 +947,53 @@ public void stepDisplayActionPerformed(ActionEvent e)
     {
         animationSimStepSeconds = tempStep;
         statusDisplay.setText("Step Size Changed");
+    }
+}
+private void realTimeActionPerformed(ActionEvent evt)
+{
+    if(nonRealTime)
+    {
+        nonRealTime = false;
+        currentJulianDate.update2CurrentTime();
+        setTime(currentJulianDate.getJulianDate());
+        animationSimStepSeconds = 1;
+        animationRefreshRateMs = 1000;
+        animateApplet(true);
+        play = false;
+    }
+    else
+    {
+        setTime(oldTime);
+        nonRealTime = true;
+        animationRefreshRateMs = 50;
+        animationSimStepSeconds = tempStep;
+        animateApplet(false);
+        play = true;
+    }
+}
+private void orbitTraceActionPerformed(ActionEvent evt)
+{
+    if(orbitShown)
+    {
+    for(int i = 0; i<input.getSize(); i++)
+    {
+        satHash.get(input.getSatelliteName(i)).setShow3DOrbitTrace(false);
+        satHash.get(input.getSatelliteName(i)).setShow3DOrbitTraceECI(false);
+        satHash.get(input.getSatelliteName(i)).setShowGroundTrack(false);
+        updateTime();
+        orbitShown = false;
+    }
+    }
+    else
+    {
+    for(int i = 0; i<input.getSize(); i++)
+    {
+        satHash.get(input.getSatelliteName(i)).setShow3DOrbitTrace(true);
+        satHash.get(input.getSatelliteName(i)).setShow3DOrbitTraceECI(true);
+        satHash.get(input.getSatelliteName(i)).setShowGroundTrack(true);
+        updateTime();
+        orbitShown = true;
+    }
     }
 }
 private void animateApplet(boolean b) {
