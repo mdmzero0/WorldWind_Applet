@@ -814,6 +814,8 @@ public void playButtonActionPerformed(ActionEvent e)
 {
     if(play && inputSat)
     {
+        animationRefreshRateMs = 50;
+        animationSimStepSeconds = tempStep;
         animateApplet(true);
         play = false;
     }
