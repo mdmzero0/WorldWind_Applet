@@ -857,22 +857,32 @@ public void stepUpButtonActionPerformed(ActionEvent e)
     }
     else
     {
-    animationSimStepSeconds = steps[stepNumber+1];
+        if(nonRealTime)
+        {
+             animationSimStepSeconds = steps[stepNumber+1];
+             statusDisplay.setText("Step Size Increased");
+             stepNumber = stepNumber+1;
+        }
+        else
+        {statusDisplay.setText("Real Time Mode");}
     tempStep = animationSimStepSeconds;
-    stepNumber = stepNumber+1;
     stepDisplay.setText("" +animationSimStepSeconds);
-    statusDisplay.setText("Step Size Increased");
     }
 }
 public void stepDownButtonActionPerformed(ActionEvent e)
 {
     if(stepNumber>0)
     {
-    animationSimStepSeconds = steps[stepNumber-1];
+        if(nonRealTime)
+        {
+            animationSimStepSeconds = steps[stepNumber-1];
+            statusDisplay.setText("Step Size Decreased");
+            stepNumber = stepNumber-1;
+        }
+        else
+        {statusDisplay.setText("Real Time Mode");}
     tempStep = animationSimStepSeconds;
-    stepNumber = stepNumber-1;
     stepDisplay.setText("" + animationSimStepSeconds);
-    statusDisplay.setText("Step Size Decreased");
     }
     else
     {
@@ -947,19 +957,26 @@ public void stepDisplayActionPerformed(ActionEvent e)
     }
     if(successStep)
     {
-        animationSimStepSeconds = tempStep;
-        statusDisplay.setText("Step Size Changed");
+        if(nonRealTime)
+        {
+            animationSimStepSeconds = tempStep;
+            statusDisplay.setText("Step Size Changed");
+        }
+        else
+        {statusDisplay.setText("Real Time Mode");}
     }
 }
 private void realTimeActionPerformed(ActionEvent evt)
 {
     if(nonRealTime)
     {
+        animateApplet(false);
         nonRealTime = false;
         currentJulianDate.update2CurrentTime();
         setTime(currentJulianDate.getJulianDate());
         animationSimStepSeconds = 1;
         animationRefreshRateMs = 1000;
+        stepDisplay.setText("" + animationSimStepSeconds);
         animateApplet(true);
         play = false;
     }
@@ -969,6 +986,7 @@ private void realTimeActionPerformed(ActionEvent evt)
         nonRealTime = true;
         animationRefreshRateMs = 50;
         animationSimStepSeconds = tempStep;
+        stepDisplay.setText("" + animationSimStepSeconds);
         animateApplet(false);
         play = true;
     }
@@ -1048,8 +1066,7 @@ private void animateApplet(boolean b) {
             else
             {playTimer.stop();
             play = true;
-            end = true;
-            statusDisplay.setText("End of Scenario");}
+            }
         }
     }
 public void WWsetMJD(double mjd)
