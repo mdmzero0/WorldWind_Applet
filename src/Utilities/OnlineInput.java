@@ -4,6 +4,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.net.URL;
 import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
 
 public class OnlineInput
 {
@@ -11,6 +14,7 @@ public class OnlineInput
     private String[] EphemerisLocation;
     private String[] Co;
     private boolean[] ModelCentered;
+    private String scenariotime;
     BufferedReader input;
 	public OnlineInput(String path) throws IOException
 	{	
@@ -50,6 +54,10 @@ public class OnlineInput
 			{
 				ModelCenteredLong = line.substring(11).trim();
 			}
+                        else if (line.startsWith("scenariotime"))
+                        {
+                                scenariotime = line.substring(13);
+                        }
 		}
 		//seperate long strings into smaller arrays
 		SatelliteName = SatelliteNameLong.split(";");
@@ -106,4 +114,46 @@ public class OnlineInput
 	{ //number of satellites
 		return SatelliteName.length;
 	}
+        public double getTime()
+        {
+            try
+            {
+            return convertScenarioTimeString2JulianDate(scenariotime+" UTC");
+            }
+            catch(Exception e)
+            {return 0.0;}
+        }
+        public static double convertScenarioTimeString2JulianDate(String scenarioTimeStr) throws Exception
+        {
+        GregorianCalendar currentTimeDate = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+
+        SimpleDateFormat dateformatShort1 = new SimpleDateFormat("dd MMM y H:m:s.S z");
+        SimpleDateFormat dateformatShort2 = new SimpleDateFormat("dd MMM y H:m:s z"); // no Milliseconds
+
+        try
+        {
+            currentTimeDate.setTime( dateformatShort1.parse(scenarioTimeStr) );
+        }
+        catch(Exception e2)
+        {
+            try
+            {
+                // try reading without the milliseconds
+                currentTimeDate.setTime( dateformatShort2.parse(scenarioTimeStr) );
+            }
+            catch(Exception e3)
+            {
+                // bad date input
+                throw new Exception("Scenario Date/Time format incorrect" + scenarioTimeStr);
+            } // catch 2
+
+        } // catch 1
+
+        // if we get here the date was accepted
+        Time t = new Time();
+        t.set(currentTimeDate.getTimeInMillis());
+
+        return t.getJulianDate();
+        
+    } // convertScenarioTimeString2JulianDate
 }
