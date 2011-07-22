@@ -49,6 +49,9 @@ public class OnlineInput
 			else if (line.startsWith("get2Dsatcolor"))
 			{
 				ColorLong = line.substring(14).trim();
+                                if("".equals(ColorLong))
+                                {ColorLong = "null;";
+                                System.out.println("Adjusted color");}
 			}
 			else if (line.startsWith("viewobject"))
 			{
@@ -88,7 +91,7 @@ public class OnlineInput
 	}
 	public String getColor(int location)
 	{ //returns satellite color
-		return Co[location];
+                return Co[location];
 	}
 	public boolean getModelCentered(int location)
 	{ //returns if 3D view should be model centered or not
