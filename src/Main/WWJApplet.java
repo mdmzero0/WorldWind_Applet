@@ -110,6 +110,7 @@ public class WWJApplet extends JApplet
     private boolean nonRealTime = true;
     double tempStep = 60;
     private boolean reset = true;
+    private boolean updating = false;
     
     //Buttons
     JButton playScenario;
@@ -932,6 +933,8 @@ private void realTimeActionPerformed(ActionEvent evt)
 }
 private void orbitTraceActionPerformed(ActionEvent evt)
 {
+    if(!updating)
+    {
     if(orbitShown)
     {
     for(int i = 0; i<input.getSize(); i++)
@@ -952,8 +955,7 @@ private void orbitTraceActionPerformed(ActionEvent evt)
         satHash.get(input.getSatelliteName(i)).setShowGroundTrack(true);
         updateTime();
         orbitShown = true;
-    }
-    }
+    }}}
 }
 private void eUpdateActionPerformed(ActionEvent e)
 {
@@ -971,8 +973,10 @@ private void eUpdateActionPerformed(ActionEvent e)
                         overrideTime = true;
                         if(update)
                         {
+                        updating = true;
                         satHash.clear();
                         inputSatellites();
+                        updating = false;
                         statusDisplay.setText("Ephemeris Updated");
                         }
                         if(!update)
@@ -980,6 +984,28 @@ private void eUpdateActionPerformed(ActionEvent e)
                             eTimer.stop();
                             statusDisplay.setText("Ephemeris Update Stopped");
                             timerOn = false;
+                        }
+                        if(orbitTrace.isSelected())
+                        {
+                            for(int i = 0; i<input.getSize(); i++)
+                            {
+                                satHash.get(input.getSatelliteName(i)).setShow3DOrbitTrace(true);
+                                satHash.get(input.getSatelliteName(i)).setShow3DOrbitTraceECI(true);
+                                satHash.get(input.getSatelliteName(i)).setShowGroundTrack(true);
+                                updateTime();
+                                orbitShown = true;
+                            }
+                        }
+                        else
+                        {
+                            for(int i = 0; i<input.getSize(); i++)
+                            {
+                                satHash.get(input.getSatelliteName(i)).setShow3DOrbitTrace(false);
+                                satHash.get(input.getSatelliteName(i)).setShow3DOrbitTraceECI(false);
+                                satHash.get(input.getSatelliteName(i)).setShowGroundTrack(false);
+                                updateTime();
+                                orbitShown = false;
+                            }
                         }
                     }});
         if(update)
