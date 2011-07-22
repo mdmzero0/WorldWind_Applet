@@ -1333,7 +1333,6 @@ public void WWsetMJD(double mjd)
                     S.setGroundTrackIni2False();
                     S.setPlot2DFootPrint(false);
                     S.setShow3DFootprint(false);
-                    System.out.println("before color");
                     if (input.getColor(i).startsWith("b"))
                     {
                             S.setSatColor(Color.BLUE);
