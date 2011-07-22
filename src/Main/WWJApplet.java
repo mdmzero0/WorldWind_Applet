@@ -109,6 +109,7 @@ public class WWJApplet extends JApplet
     private boolean twoDon = false;
     private boolean nonRealTime = true;
     double tempStep = 60;
+    private boolean reset = true;
     
     //Buttons
     JButton playScenario;
@@ -744,6 +745,7 @@ public void playButtonActionPerformed(ActionEvent e)
         animateApplet(true);
         play = false;
         stepDisplay.setText("" + animationSimStepSeconds);
+        reset = false;
     }
     else if(end)
     {}
@@ -764,16 +766,21 @@ public void pauseButtonActionPerformed(ActionEvent e)
 }
 public void resetButtonActionPerformed(ActionEvent e)
 {
-
+    if(reset)
+    {}
+    else{
     animateApplet(false);
     play = true;
     statusDisplay.setText("Scenario Reset");
+    System.out.println("reset");
     realTime.setSelected(false);
     nonRealTime = true;
     if(inputSat)
     {setTime(time);}
     else
-    {currentJulianDate.update2CurrentTime();}
+    {currentJulianDate.update2CurrentTime();} 
+    reset = true;
+    }
 }
 public void stepUpButtonActionPerformed(ActionEvent e)
 {
@@ -904,6 +911,7 @@ private void realTimeActionPerformed(ActionEvent evt)
         animationRefreshRateMs = 1000;
         stepDisplay.setText("" + animationSimStepSeconds);
         statusDisplay.setText("Real Time Mode");
+        reset = false;
         if(play)
         {
         animateApplet(true);
@@ -920,6 +928,7 @@ private void realTimeActionPerformed(ActionEvent evt)
         statusDisplay.setText("Non-real Time Mode");
         animateApplet(false);
         play = true;
+        reset = false;
     }
 }
 private void orbitTraceActionPerformed(ActionEvent evt)
@@ -1333,7 +1342,6 @@ public void WWsetMJD(double mjd)
                     S.setGroundTrackIni2False();
                     S.setPlot2DFootPrint(false);
                     S.setShow3DFootprint(false);
-                    System.out.println("before color");
                     if (input.getColor(i).startsWith("b"))
                     {
                             S.setSatColor(Color.BLUE);
@@ -1364,16 +1372,16 @@ public void WWsetMJD(double mjd)
                     }
                     else
                     {
-                        float h = random.nextFloat();                        
-                        float s = random.nextFloat();
-                        float b = random.nextFloat();
-                        S.setSatColor(Color.getHSBColor(h, s, b));
+                        S.setSatColor(Color.MAGENTA);
                     }
                     vector = reader.readStkEphemeris(input.getEphemerisLocation(i));
                     tempTime = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
+                    if(!overrideTime)
+                    {
                     if(tempTime < time)
                     {
                         time = tempTime;
+                    }
                     }
                     S.setEphemeris(vector);
                     // set default 3d model and turn on the use of 3d models
