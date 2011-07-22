@@ -112,11 +112,6 @@ public class J2DEarthPanel extends JPanel implements ComponentListener , java.io
         
         iniObject(satHash);
         
-        // save buttons
-        this.zoomInToggleButton = zoomInToggleButton;
-        this.zoomOutToggleButton = zoomOutToggleButton;
-        this.recenterToggleButton = recenterToggleButton;
-        
         this.setBackground(backgroundColor);
         
         // TEMP try out the LandMassRegions -- move this to top class, so each map doesn't have their own? or leave it this way so each can be customized
@@ -164,6 +159,7 @@ public class J2DEarthPanel extends JPanel implements ComponentListener , java.io
         popup = new JPopupMenu();
         ActionListener menuListener = new ActionListener()
         {
+            @Override
             public void actionPerformed(ActionEvent event)
             {
                 // handle the menu selection!
@@ -300,6 +296,7 @@ public class J2DEarthPanel extends JPanel implements ComponentListener , java.io
     }
     
     // Frame resized... scale the image!
+    @Override
     public void componentResized(ComponentEvent e)
     {
         //Component c = e.getComponent();
@@ -719,10 +716,13 @@ public class J2DEarthPanel extends JPanel implements ComponentListener , java.io
     
     public void itemStateChanged(ItemEvent e)
     {}
+    @Override
     public void componentHidden(ComponentEvent e)
     {}
+    @Override
     public void componentMoved(ComponentEvent e)
     {}
+    @Override
     public void componentShown(ComponentEvent e)
     {}
     
@@ -732,6 +732,7 @@ public class J2DEarthPanel extends JPanel implements ComponentListener , java.io
     {
         double[] prevll = { Double.NaN , Double.NaN };
 
+        @Override
         public void mousePressed(MouseEvent e)
         {
             checkPopup(e);
@@ -827,7 +828,7 @@ public class J2DEarthPanel extends JPanel implements ComponentListener , java.io
             }
             
             // if middle button hit, turn off zoom in/out  buttons
-            if(e.getButton() == e.BUTTON2)
+            if(e.getButton() == MouseEvent.BUTTON2)
             {
                 zoomInToggleButton.setSelected(false);
                 zoomOutToggleButton.setSelected(false); 
@@ -836,11 +837,13 @@ public class J2DEarthPanel extends JPanel implements ComponentListener , java.io
             
         } // mousePressed
         
+        @Override
         public void mouseClicked(MouseEvent e)
         {
             checkPopup(e);
         }
         
+        @Override
         public void mouseReleased(MouseEvent e)
         {
             checkPopup(e);
@@ -849,6 +852,7 @@ public class J2DEarthPanel extends JPanel implements ComponentListener , java.io
             prevll[1] = Double.NaN;
         }
 
+        @Override
         public void mouseDragged(MouseEvent e)
         {
             // acquire new lat and long
@@ -920,16 +924,19 @@ public class J2DEarthPanel extends JPanel implements ComponentListener , java.io
     // An inner class to show when popup events occur
     class PopupPrintListener implements PopupMenuListener
     {
+        @Override
         public void popupMenuWillBecomeVisible(PopupMenuEvent e)
         {
             //System.out.println("Popup menu will be visible!");
         }
         
+        @Override
         public void popupMenuWillBecomeInvisible(PopupMenuEvent e)
         {
             //System.out.println("Popup menu will be invisible!");
         }
         
+        @Override
         public void popupMenuCanceled(PopupMenuEvent e)
         {
             //System.out.println("Popup menu is hidden!");

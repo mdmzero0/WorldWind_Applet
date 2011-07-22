@@ -118,6 +118,7 @@ public class J2dEarthLabel2 extends JLabel  implements java.io.Serializable
         Action toggleShowFPS = new AbstractAction()
         {
 
+            @Override
             public void actionPerformed(ActionEvent e)
             {
                 showFPS = !showFPS;

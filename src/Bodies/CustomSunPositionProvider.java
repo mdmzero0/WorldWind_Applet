@@ -25,7 +25,6 @@ package Bodies;
 
 import gov.nasa.worldwind.examples.sunlight.SunPositionProvider;
 import gov.nasa.worldwind.geom.LatLon;
-import Bodies.Sun;
 
 /**
  *
@@ -40,6 +39,7 @@ public class CustomSunPositionProvider implements SunPositionProvider
         this.sun = sun;
     }
 
+    @Override
     public LatLon getPosition()
 	{
 		return LatLon.fromRadians(sun.getCurrentLLA()[0], sun.getCurrentLLA()[1]);

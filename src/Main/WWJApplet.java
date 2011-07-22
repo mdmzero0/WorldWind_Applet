@@ -150,6 +150,7 @@ public class WWJApplet extends JApplet
     {
     }
 
+    @Override
     public void init()
     {
         try
@@ -375,10 +376,10 @@ public class WWJApplet extends JApplet
         }
         catch (Throwable e)
         {
-            e.printStackTrace();
         }
     }
 
+    @Override
     public void start()
     {
         // Call javascript appletStart()
@@ -392,6 +393,7 @@ public class WWJApplet extends JApplet
         }
     }
 
+    @Override
     public void stop()
     {
         // Call javascript appletSop()
