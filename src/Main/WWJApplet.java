@@ -772,7 +772,6 @@ public void resetButtonActionPerformed(ActionEvent e)
     animateApplet(false);
     play = true;
     statusDisplay.setText("Scenario Reset");
-    System.out.println("reset");
     realTime.setSelected(false);
     nonRealTime = true;
     if(inputSat)
@@ -1372,7 +1371,7 @@ public void WWsetMJD(double mjd)
                     }
                     else
                     {
-                        S.setSatColor(Color.MAGENTA);
+                            S.setSatColor(Color.MAGENTA);
                     }
                     vector = reader.readStkEphemeris(input.getEphemerisLocation(i));
                     tempTime = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
@@ -1404,6 +1403,12 @@ public void WWsetMJD(double mjd)
                 time = scenarioTime;
                 setTime(time);
                 }
+            //step one second forward than go back to original time...fixes dissapearance? 
+            double temp = currentJulianDate.getJulianDate();
+            currentJulianDate.addSeconds(1.0);
+            updateTime();
+            GregorianCalendar gc = Time.convertJD2Calendar(temp);
+            setTime(gc.getTimeInMillis());
             statusDisplay.setText("Satellites Added");
             }
             else if(scenarioTime == 0.0)
@@ -1448,7 +1453,7 @@ public void WWsetMJD(double mjd)
             currentJulianDate.update2CurrentTime();
             setTime(currentJulianDate.getJulianDate());
             }
-            play = false;}           
+            play = false;}
     }
 }
 
