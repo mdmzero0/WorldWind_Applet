@@ -1312,7 +1312,7 @@ public void WWsetMJD(double mjd)
     {
             //Read satellites
             try{
-            input = new OnlineInput("http://localhost:8080/parameters_test.html");
+            input = new OnlineInput("http://localhost:8080/sean.html");
             int n = input.getSize();
             for (int i = 0; i <n; i++)
             {
