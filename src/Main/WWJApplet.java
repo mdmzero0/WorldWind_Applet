@@ -111,6 +111,7 @@ public class WWJApplet extends JApplet
     double tempStep = 60;
     private boolean reset = true;
     private boolean updating = false;
+    private boolean displayed = false;
     
     //Buttons
     JButton playScenario;
@@ -978,11 +979,15 @@ private void eUpdateActionPerformed(ActionEvent e)
                         inputSatellites();
                         updating = false;
                         statusDisplay.setText("Ephemeris Updated");
+                        displayed = false;
                         }
                         if(!update)
                         {
                             eTimer.stop();
-                            statusDisplay.setText("Ephemeris Update Stopped");
+                            if(!displayed)
+                            {statusDisplay.setText("Ephemeris Update Stopped");
+                            displayed = true;
+                            }
                             timerOn = false;
                         }
                         if(orbitTrace.isSelected())
