@@ -1403,9 +1403,12 @@ public void WWsetMJD(double mjd)
                 time = scenarioTime;
                 setTime(time);
                 }
-            currentJulianDate.addSeconds(1);
+            //step one second forward than go back to original time...fixes dissapearance? 
+            double temp = currentJulianDate.getJulianDate();
+            currentJulianDate.addSeconds(1.0);
             updateTime();
-            setTime(time);
+            GregorianCalendar gc = Time.convertJD2Calendar(temp);
+            setTime(gc.getTimeInMillis());
             statusDisplay.setText("Satellites Added");
             }
             else if(scenarioTime == 0.0)
