@@ -44,6 +44,7 @@ import javax.swing.Timer;
 import TwoDImage.J2DEarthPanel;
 import View.*;
 import gov.nasa.worldwind.awt.AWTInputHandler;
+import java.util.Random;
 
 
 /**
@@ -86,6 +87,7 @@ public class WWJApplet extends JApplet
     Vector<StateVector> vector;
     boolean timerOn = false;
     Timer eTimer;
+    Random random;
     
     private Time currentJulianDate = new Time(); // current sim or real time (Julian Date)
     private Time scenarioEpochDate = new Time();
@@ -959,16 +961,21 @@ private void eUpdateActionPerformed(ActionEvent e)
                     public void actionPerformed(ActionEvent event)
                     {
                         overrideTime = true;
+                        if(update)
+                        {
                         satHash.clear();
                         inputSatellites();
                         statusDisplay.setText("Ephemeris Updated");
+                        }
                         if(!update)
                         {
                             eTimer.stop();
                             statusDisplay.setText("Ephemeris Update Stopped");
+                            timerOn = false;
                         }
                     }});
-        eTimer.start();
+        if(update)
+        {eTimer.start();}
         timerOn = true;
     }
 }
@@ -1326,6 +1333,7 @@ public void WWsetMJD(double mjd)
                     S.setGroundTrackIni2False();
                     S.setPlot2DFootPrint(false);
                     S.setShow3DFootprint(false);
+                    System.out.println("before color");
                     if (input.getColor(i).startsWith("b"))
                     {
                             S.setSatColor(Color.BLUE);
@@ -1353,6 +1361,13 @@ public void WWsetMJD(double mjd)
                     else if (input.getColor(i).startsWith("o"))
                     {
                             S.setSatColor(Color.ORANGE);
+                    }
+                    else
+                    {
+                        float h = random.nextFloat();                        
+                        float s = random.nextFloat();
+                        float b = random.nextFloat();
+                        S.setSatColor(Color.getHSBColor(h, s, b));
                     }
                     vector = reader.readStkEphemeris(input.getEphemerisLocation(i));
                     tempTime = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
