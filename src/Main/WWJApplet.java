@@ -82,12 +82,17 @@ public class WWJApplet extends JApplet
     private OnlineInput input;
     Vector<JSatTrakTimeDependent> timeDependentObjects = new Vector<JSatTrakTimeDependent>();
     private boolean orbitShown = true;
+    private boolean update = false;
+    Vector<StateVector> vector;
+    boolean timerOn = false;
+    Timer eTimer;
     
     private Time currentJulianDate = new Time(); // current sim or real time (Julian Date)
     private Time scenarioEpochDate = new Time();
     double time = 100000000000000.0; //Far too big- used to determine earliest ephemeris time
     private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss.SSS z");
     double oldTime;
+    private boolean overrideTime = false;
     
     //Animation
     private int currentPlayDirection = 0; //-1 backward, 0 stop, 1 forwards
@@ -121,6 +126,7 @@ public class WWJApplet extends JApplet
     JRadioButton threeDbutton;
     JCheckBox realTime;
     JCheckBox orbitTrace;
+    JCheckBox eUpdate;
     
     Container Content = this.getContentPane();
     J2DEarthPanel twoDpanel;
@@ -141,7 +147,6 @@ public class WWJApplet extends JApplet
 
     public void init()
     {
-        Vector<StateVector> vector;
         try
         {
             // Check for initial configuration values
@@ -339,101 +344,19 @@ public class WWJApplet extends JApplet
                         public void actionPerformed(java.awt.event.ActionEvent evt){
                     orbitTraceActionPerformed(evt);   
                 }}));
-            toolbar.add(orbitTrace); 
+            toolbar.add(orbitTrace);
             
-            //Read satellites
-            try{
-            input = new OnlineInput("http://localhost:8080/parameters_test.html");
-            int n = input.getSize();
-            for (int i = 0; i <n; i++)
-            {
-                addCustomSat(input.getSatelliteName(i));
-            }
-            reader = new StkEphemerisReader();
-            double tempTime;
-            for (int i = 0; i <n; i++)
-            {	
-                    AbstractSatellite S = satHash.get(input.getSatelliteName(i));
-                    S.setGroundTrackIni2False();
-                    S.setPlot2DFootPrint(false);
-                    S.setShow3DFootprint(false);
-                    if (input.getColor(i).startsWith("b"))
-                    {
-                            S.setSatColor(Color.BLUE);
-                    }
-                    else if (input.getColor(i).startsWith("g"))
-                    {
-                            S.setSatColor(Color.GREEN);
-                    }
-                    else if (input.getColor(i).startsWith("r"))
-                    {
-                            S.setSatColor(Color.RED);
-                    }
-                    else if (input.getColor(i).startsWith("y"))
-                    {
-                            S.setSatColor(Color.YELLOW);
-                    }
-                    else if (input.getColor(i).startsWith("w"))
-                    {
-                            S.setSatColor(Color.WHITE);
-                    }
-                    else if (input.getColor(i).startsWith("p"))
-                    {
-                            S.setSatColor(Color.PINK);
-                    }
-                    else if (input.getColor(i).startsWith("o"))
-                    {
-                            S.setSatColor(Color.ORANGE);
-                    }
-                    vector = reader.readStkEphemeris(input.getEphemerisLocation(i));
-                    tempTime = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
-                    if(tempTime < time)
-                    {
-                        time = tempTime;
-                    }
-                    S.setEphemeris(vector);
-                    // set default 3d model and turn on the use of 3d models
-//                    S.setThreeDModelPath("globalstar/Globalstar.3ds");
-//                    S.setUse3dModel(true);
-                    if (input.getModelCentered(i))
-                    {
-                           //statusDisplay.setText("Can't do that yet!");
-                    }
-                    else
-                    {
-                            //dont do anything!
-                    }
-            }
-            double scenarioTime = input.getTime();
-            if(scenarioTime>time)
-            {
-            time = scenarioTime;
-            setTime(time);
-            statusDisplay.setText("Satellites Added");
-            }
-            else if(scenarioTime == 0.0)
-            {
-                statusDisplay.setText("Incorrect time requested");
-                inputSat = false;
-                currentJulianDate.update2CurrentTime();
-            }
-            else if(satHash.get(n).getEphemeris() == null)
-            {
-                statusDisplay.setText("Requested time not within ephemeris range");
-                time = scenarioTime;
-                setTime(time);
-            }
-            else
-            {
-                statusDisplay.setText("Requested time not within ephemeris range");
-                time = scenarioTime;
-                setTime(time);
-            }
-            }
-            catch(Exception e)
-            {statusDisplay.setText("No satellites found");
-            inputSat = false;
-            currentJulianDate.update2CurrentTime();}
+            //Add checkbox for epehemris updating
+            eUpdate = new JCheckBox("Auto Update");
+            eUpdate.setSelected(false);
+            eUpdate.addActionListener((new java.awt.event.ActionListener(){
+                @Override
+                        public void actionPerformed(java.awt.event.ActionEvent evt){
+                    eUpdateActionPerformed(evt);   
+                }}));
+            toolbar.add(eUpdate);
+            
+            inputSatellites(); //function that reads parameters file and adds satellites
             
             // Call javascript appletInit()
             try
@@ -814,8 +737,11 @@ public void playButtonActionPerformed(ActionEvent e)
 {
     if(play && inputSat)
     {
+        animationRefreshRateMs = 50;
+        animationSimStepSeconds = tempStep;
         animateApplet(true);
         play = false;
+        stepDisplay.setText("" + animationSimStepSeconds);
     }
     else if(end)
     {}
@@ -855,22 +781,32 @@ public void stepUpButtonActionPerformed(ActionEvent e)
     }
     else
     {
-    animationSimStepSeconds = steps[stepNumber+1];
+        if(nonRealTime)
+        {
+             animationSimStepSeconds = steps[stepNumber+1];
+             statusDisplay.setText("Step Size Increased");
+             stepNumber = stepNumber+1;
+        }
+        else
+        {statusDisplay.setText("Real Time Mode");}
     tempStep = animationSimStepSeconds;
-    stepNumber = stepNumber+1;
     stepDisplay.setText("" +animationSimStepSeconds);
-    statusDisplay.setText("Step Size Increased");
     }
 }
 public void stepDownButtonActionPerformed(ActionEvent e)
 {
     if(stepNumber>0)
     {
-    animationSimStepSeconds = steps[stepNumber-1];
+        if(nonRealTime)
+        {
+            animationSimStepSeconds = steps[stepNumber-1];
+            statusDisplay.setText("Step Size Decreased");
+            stepNumber = stepNumber-1;
+        }
+        else
+        {statusDisplay.setText("Real Time Mode");}
     tempStep = animationSimStepSeconds;
-    stepNumber = stepNumber-1;
     stepDisplay.setText("" + animationSimStepSeconds);
-    statusDisplay.setText("Step Size Decreased");
     }
     else
     {
@@ -945,21 +881,32 @@ public void stepDisplayActionPerformed(ActionEvent e)
     }
     if(successStep)
     {
-        animationSimStepSeconds = tempStep;
-        statusDisplay.setText("Step Size Changed");
+        if(nonRealTime)
+        {
+            animationSimStepSeconds = tempStep;
+            statusDisplay.setText("Step Size Changed");
+        }
+        else
+        {statusDisplay.setText("Real Time Mode");}
     }
 }
 private void realTimeActionPerformed(ActionEvent evt)
 {
     if(nonRealTime)
     {
+        animateApplet(false);
         nonRealTime = false;
         currentJulianDate.update2CurrentTime();
         setTime(currentJulianDate.getJulianDate());
         animationSimStepSeconds = 1;
         animationRefreshRateMs = 1000;
+        stepDisplay.setText("" + animationSimStepSeconds);
+        statusDisplay.setText("Real Time Mode");
+        if(play)
+        {
         animateApplet(true);
         play = false;
+        }
     }
     else
     {
@@ -967,6 +914,8 @@ private void realTimeActionPerformed(ActionEvent evt)
         nonRealTime = true;
         animationRefreshRateMs = 50;
         animationSimStepSeconds = tempStep;
+        stepDisplay.setText("" + animationSimStepSeconds);
+        statusDisplay.setText("Non-real Time Mode");
         animateApplet(false);
         play = true;
     }
@@ -996,8 +945,35 @@ private void orbitTraceActionPerformed(ActionEvent evt)
     }
     }
 }
+private void eUpdateActionPerformed(ActionEvent e)
+{
+    if(update)
+    {update = false;}
+    else
+    {update = true;}
+    if(inputSat)
+    {
+        eTimer = new Timer(6000, new ActionListener()
+                {
+                @Override
+                    public void actionPerformed(ActionEvent event)
+                    {
+                        overrideTime = true;
+                        satHash.clear();
+                        inputSatellites();
+                        statusDisplay.setText("Ephemeris Updated");
+                        if(!update)
+                        {
+                            eTimer.stop();
+                            statusDisplay.setText("Ephemeris Update Stopped");
+                        }
+                    }});
+        eTimer.start();
+        timerOn = true;
+    }
+}
 private void animateApplet(boolean b) {
-        if (b)
+        if (b && inputSat)
         {
         statusDisplay.setText("Scenario Running");
         //Hard Coded play scenario
@@ -1044,10 +1020,10 @@ private void animateApplet(boolean b) {
             if(play)
             {}
             else
-            {playTimer.stop();
+            {if(playTimer != null)
+            {playTimer.stop();}
             play = true;
-            end = true;
-            statusDisplay.setText("End of Scenario");}
+            }
         }
     }
 public void WWsetMJD(double mjd)
@@ -1331,6 +1307,125 @@ public void WWsetMJD(double mjd)
                 ((CountryBoundariesLayer) layer).setEnabled(false); // off by default
             }
             } // for layers
+    }
+    public void inputSatellites()
+    {
+            //Read satellites
+            try{
+            input = new OnlineInput("http://localhost:8080/parameters_test.html");
+            int n = input.getSize();
+            for (int i = 0; i <n; i++)
+            {
+                addCustomSat(input.getSatelliteName(i));
+            }
+            reader = new StkEphemerisReader();
+            double tempTime;
+            for (int i = 0; i <n; i++)
+            {	
+                    AbstractSatellite S = satHash.get(input.getSatelliteName(i));
+                    S.setGroundTrackIni2False();
+                    S.setPlot2DFootPrint(false);
+                    S.setShow3DFootprint(false);
+                    if (input.getColor(i).startsWith("b"))
+                    {
+                            S.setSatColor(Color.BLUE);
+                    }
+                    else if (input.getColor(i).startsWith("g"))
+                    {
+                            S.setSatColor(Color.GREEN);
+                    }
+                    else if (input.getColor(i).startsWith("r"))
+                    {
+                            S.setSatColor(Color.RED);
+                    }
+                    else if (input.getColor(i).startsWith("y"))
+                    {
+                            S.setSatColor(Color.YELLOW);
+                    }
+                    else if (input.getColor(i).startsWith("w"))
+                    {
+                            S.setSatColor(Color.WHITE);
+                    }
+                    else if (input.getColor(i).startsWith("p"))
+                    {
+                            S.setSatColor(Color.PINK);
+                    }
+                    else if (input.getColor(i).startsWith("o"))
+                    {
+                            S.setSatColor(Color.ORANGE);
+                    }
+                    vector = reader.readStkEphemeris(input.getEphemerisLocation(i));
+                    tempTime = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
+                    if(tempTime < time)
+                    {
+                        time = tempTime;
+                    }
+                    S.setEphemeris(vector);
+                    // set default 3d model and turn on the use of 3d models
+//                    S.setThreeDModelPath("globalstar/Globalstar.3ds");
+//                    S.setUse3dModel(true);
+                    if (input.getModelCentered(i))
+                    {
+                           //statusDisplay.setText("Can't do that yet!");
+                    }
+                    else
+                    {
+                            //dont do anything!
+                    }
+            }
+            double scenarioTime = input.getTime();
+            if(scenarioTime>time)
+            {
+                if(!overrideTime)
+                {
+                time = scenarioTime;
+                setTime(time);
+                }
+            statusDisplay.setText("Satellites Added");
+            }
+            else if(scenarioTime == 0.0)
+            {
+                statusDisplay.setText("Incorrect time requested");
+                inputSat = false;
+                if(!overrideTime)
+                {
+                currentJulianDate.update2CurrentTime();
+                setTime(currentJulianDate.getJulianDate());
+                }
+                play = false;
+            }
+            else if(satHash.get(input.getSatelliteName(n)).getEphemeris() == null)
+            {
+                statusDisplay.setText("Requested time not within ephemeris range");
+                if(!overrideTime)
+                {
+                time = scenarioTime;
+                setTime(time);
+                }
+                inputSat = false;
+                play = false;
+            }
+            else
+            {
+                statusDisplay.setText("Requested time not within ephemeris range");
+                if(!overrideTime)
+                {
+                time = scenarioTime;
+                setTime(time);
+                }
+                inputSat = false;
+                play = false;
+            }
+            }
+            catch(Exception e)
+            {statusDisplay.setText("No satellites found");
+            inputSat = false;
+            if(!overrideTime)
+            {
+            currentJulianDate.update2CurrentTime();
+            setTime(currentJulianDate.getJulianDate());
+            }
+            play = false;}           
     }
 }
 
