@@ -50,8 +50,7 @@ public class OnlineInput
 			{
 				ColorLong = line.substring(14).trim();
                                 if("".equals(ColorLong))
-                                {ColorLong = "null;";
-                                System.out.println("Adjusted color");}
+                                {ColorLong = "null;";}
 			}
 			else if (line.startsWith("viewobject"))
 			{
