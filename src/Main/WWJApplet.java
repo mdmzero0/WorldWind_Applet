@@ -1397,7 +1397,7 @@ public void WWsetMJD(double mjd)
                     }
             }
             double scenarioTime = input.getTime();
-            if(scenarioTime>time)
+            if(scenarioTime>=time)
             {
                 if(!overrideTime)
                 {
