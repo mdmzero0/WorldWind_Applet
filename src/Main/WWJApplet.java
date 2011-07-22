@@ -1378,10 +1378,10 @@ public void WWsetMJD(double mjd)
                     tempTime = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
                     if(!overrideTime)
                     {
-                    if(tempTime < time)
-                    {
-                        time = tempTime;
-                    }
+                        if(tempTime < time)
+                        {
+                            time = tempTime;
+                        }
                     }
                     S.setEphemeris(vector);
                     // set default 3d model and turn on the use of 3d models
@@ -1397,7 +1397,7 @@ public void WWsetMJD(double mjd)
                     }
             }
             double scenarioTime = input.getTime();
-            if(scenarioTime>time)
+            if(scenarioTime>=time)
             {
                 if(!overrideTime)
                 {
