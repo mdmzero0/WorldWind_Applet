@@ -1,5 +1,7 @@
 package Utilities;
 
+//Class created to read a file containing user inputs
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.net.URL;
@@ -10,21 +12,21 @@ import java.util.TimeZone;
 
 public class OnlineInput
 {
-    private String[] SatelliteName;
-    private String[] EphemerisLocation;
-    private String[] Co;
-    private boolean[] ModelCentered;
-    private String scenariotime;
+    private String[] SatelliteName; //Array of satellite names
+    private String[] EphemerisLocation; //Arrary  of links to ephemeris files
+    private String[] Co; //Array of color strings
+    private boolean[] ModelCentered; //Array for model centered view booleans
+    private String scenariotime; //Scenario time input
     BufferedReader input;
 	public OnlineInput(String path) throws IOException
 	{	
-		UpdateInput(path);
+		UpdateInput(path); //Call the read file method
 	}
         private void UpdateInput(String file) throws IOException
 	{ //reads a file - updates user input
 
         try {
-		URL url = new URL(file);
+		URL url = new URL(file); //open URL file stream
 		InputStream in = url.openStream();
 		input = new BufferedReader(new InputStreamReader(in));
         } catch (FileNotFoundException ex) {
@@ -38,25 +40,25 @@ public class OnlineInput
 		//read lines - assign to a single string- parse later into the arrays
 		while ((line = input.readLine()) != null)
 		{
-			if (line.startsWith("satellitename"))
+			if (line.startsWith("satellitename")) //Satellite name input
 			{
 				SatelliteNameLong = line.substring(14).trim();
 			}
-			else if (line.startsWith("ephemerislocation"))
+			else if (line.startsWith("ephemerislocation")) //Ephemeris location input
 			{
 				EphemerisLocationLong = line.substring(18).trim();
 			}
-			else if (line.startsWith("get2Dsatcolor"))
+			else if (line.startsWith("get2Dsatcolor")) //Color input
 			{
 				ColorLong = line.substring(14).trim();
                                 if("".equals(ColorLong))
                                 {ColorLong = "null;";}
 			}
-			else if (line.startsWith("viewobject"))
+			else if (line.startsWith("viewobject")) //View object
 			{
 				ModelCenteredLong = line.substring(11).trim();
 			}
-                        else if (line.startsWith("scenariotime"))
+                        else if (line.startsWith("scenariotime")) //Scenario time
                         {
                                 scenariotime = line.substring(13);
                         }
