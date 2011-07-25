@@ -31,7 +31,6 @@ import gov.nasa.worldwind.geom.Vec4;
 import gov.nasa.worldwind.render.DrawContext;
 import gov.nasa.worldwind.render.Renderable;
 import javax.media.opengl.GL;
-import Satellite.AbstractSatellite;
 import Layers.ECIRenderableLayer;
 import Utilities.AstroConst;
 import Utilities.MathUtils;
@@ -147,6 +146,7 @@ public class WWModel3D_new implements Renderable
     // Rendering routines so the object can render itself ------
     //===============================================================
     // old doRender
+    @Override
     public void render(DrawContext dc) 
     { 
         try {
@@ -157,7 +157,6 @@ public class WWModel3D_new implements Renderable
         // handle any exceptions
         catch (Exception e) {
             // handle
-            e.printStackTrace();
         }
         // we must end drawing so that opengl
         // states do not leak through.

@@ -23,10 +23,6 @@
 
 package Utilities;
 
-import Utilities.AstroConst;
-import Utilities.MathUtils;
-
-
 /**
  *
  * @author Shawn E. Gano

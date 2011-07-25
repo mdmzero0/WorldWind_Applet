@@ -24,11 +24,6 @@
 
 package Satellite;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.GregorianCalendar;

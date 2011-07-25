@@ -114,6 +114,7 @@ class ModelViewInputSupport implements java.beans.PropertyChangeListener
         }
     }
 
+    @Override
     public void propertyChange(java.beans.PropertyChangeEvent event)
     {
         if (event == null)

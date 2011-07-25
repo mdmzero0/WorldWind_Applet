@@ -24,11 +24,9 @@
 
 package Utilities;
 
-import gov.nasa.worldwind.geom.LatLon;
 import gov.nasa.worldwind.render.DrawContext;
 import gov.nasa.worldwind.render.Polyline;
 import java.awt.Color;
-import java.util.Vector;
 import javax.media.opengl.GL;
 import Bodies.Sun;
 

@@ -27,7 +27,6 @@
 package Satellite;
 
 import java.util.Hashtable;
-import Satellite.AbstractSatellite;
 import Utilities.Time;
 
 /**

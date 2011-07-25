@@ -150,7 +150,6 @@ public class LandMassRegions
          }
          catch(Exception e)
          {
-             e.printStackTrace();
          }
          
     } // readInLandMassRegions
