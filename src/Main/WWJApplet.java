@@ -1434,7 +1434,7 @@ public void WWsetMJD(double mjd)
     
     //Adds user inputs to scenario, including satellites as well as scenario time if needed
     public void inputSatellites()
-    {
+    {       boolean ignoreOverride = false;
             //Read satellites
             try{
             input = new OnlineInput("http://localhost:8080/parameters_test.html"); //Reads user input
@@ -1490,7 +1490,7 @@ public void WWsetMJD(double mjd)
                     }
                     vector = reader.readStkEphemeris(input.getEphemerisLocation(i)); //Read ephemeris into vector
                     tempTime = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC"); //Save ephemeris time
-                    if(!overrideTime) //If not override time, then time needs to be updated
+                    if(!overrideTime || ignoreOverride) //If not override time, then time needs to be updated
                     {
                         if(tempTime < time) //If earlier ephemeris time
                         {
@@ -1518,11 +1518,10 @@ public void WWsetMJD(double mjd)
             double scenarioTime = input.getTime(); //Get user input time
             if(scenarioTime>=time && scenarioTime < maxTempTime|| overrideTime) //If user input time is greater than time in ephemeris
             {
-                if(!overrideTime) //If time needs to be updated
+                if(!overrideTime || ignoreOverride) //If time needs to be updated
                 {
                 time = scenarioTime; //set time to user input time
                 setTime(time);
-                inputSat = true;
                 }
             //step one second forward than go back to original time...fixes dissapearance? 
             double temp = currentJulianDate.getJulianDate();
@@ -1531,17 +1530,21 @@ public void WWsetMJD(double mjd)
             GregorianCalendar gc = Time.convertJD2Calendar(temp);
             setTime(gc.getTimeInMillis());
             statusDisplay.setText("Satellites Added");
+            inputSat = true;
+            play = true;
+            ignoreOverride = false;
             }
             else if(scenarioTime == 0.0) //Means user input read a bad time string
             {
                 statusDisplay.setText("Incorrect time requested");
                 inputSat = false; //No satellites added
-                if(!overrideTime) //If time needs to be changed
+                if(!overrideTime || ignoreOverride) //If time needs to be changed
                 {
                 currentJulianDate.update2CurrentTime(); //Set to current time
                 setTime(currentJulianDate.getJulianDate());
                 }
                 play = false;
+                ignoreOverride = true;
                 try //remove satellites that were added: don't display satellites if time is bad!
                 {satHash.clear();}
                 catch(Exception e)
@@ -1550,24 +1553,26 @@ public void WWsetMJD(double mjd)
             else
             {//Outside ephemeris time
                 statusDisplay.setText("Requested time not within ephemeris range");
-                if(!overrideTime) //If time needs to be updated
+                if(!overrideTime || ignoreOverride) //If time needs to be updated
                 {
                 time = scenarioTime; //Set time to requested time
                 setTime(time);
                 }
                 inputSat = false; //No satellites
                 play = false;
+                ignoreOverride = true;
             }
             }
             catch(Exception e) //URL given in inputs does not connect to STK ephemeris file
             {statusDisplay.setText("No satellites found");
             inputSat = false; //No satellites
-            if(!overrideTime) //If time needs to be updated
+            if(!overrideTime || ignoreOverride) //If time needs to be updated
             {
             currentJulianDate.update2CurrentTime(); //Set to current time
             setTime(currentJulianDate.getJulianDate());
             }
-            play = false;}
+            play = false;
+            ignoreOverride = true;}
     }
 } //End of program
 
