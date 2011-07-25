@@ -809,6 +809,7 @@ public void resetButtonActionPerformed(ActionEvent e)
     realTime.setSelected(false);
     //Non real time
     nonRealTime = true;
+    //Reset step size
     //If there are satellites, set time to user requested time
     if(inputSat)
     {setTime(time);}
@@ -992,7 +993,7 @@ private void realTimeActionPerformed(ActionEvent evt)
 }
 private void orbitTraceActionPerformed(ActionEvent evt)
 {
-    if(!updating)
+    if(!updating && inputSat)
     {//Satellites are already added
     if(orbitShown)
     {//Orbit is already displayed, remove it
@@ -1029,64 +1030,65 @@ private void eUpdateActionPerformed(ActionEvent e)
     {update = false;}
     else //If automatic update is off, set on when clicked
     {update = true;}
-    if(inputSat) //If there are satellites
-    {
-        eTimer = new Timer(6000, new ActionListener() //create update timer
+    eTimer = new Timer(6000, new ActionListener() //create update timer
+            {
+            @Override
+                public void actionPerformed(ActionEvent event)
                 {
-                @Override
-                    public void actionPerformed(ActionEvent event)
+                    overrideTime = true; //Do not change time when re-reading input file
+                    if(update)
+                    { //Update scenario
+                    updating = true; //Do not repaint during this time 
+                    satHash.clear(); //Remove satellites
+                    inputSatellites(); //Add satellites, but ignore changing time
+                    updating = false; //Can repaint
+                    statusDisplay.setText("Ephemeris Updated");
+                    displayed = false; //Variable for satus display: prevents update from constantly overriding other status messages
+                    }
+                    if(!update) //Stop updating!
                     {
-                        overrideTime = true; //Do not change time when re-reading input file
-                        if(update)
-                        { //Update scenario
-                        updating = true; //Do not repaint during this time
-                        satHash.clear(); //Remove satellites
-                        inputSatellites(); //Add satellites, but ignore changing time
-                        updating = false; //Can repaint
-                        statusDisplay.setText("Ephemeris Updated");
-                        displayed = false; //Variable for satus display: prevents update from constantly overriding other status messages
+                        eTimer.stop(); //Stop timer
+                        if(!displayed) //If it hasn't already been displayed
+                        {statusDisplay.setText("Ephemeris Update Stopped");
+                        displayed = true; //has been displayed
                         }
-                        if(!update) //Stop updating!
+                    }
+                    try{
+                    if(orbitTrace.isSelected()) //if orbit traces were displayed, need to redraw
+                    {
+                        for(int i = 0; i<input.getSize(); i++)
                         {
-                            eTimer.stop(); //Stop timer
-                            if(!displayed) //If it hasn't already been displayed
-                            {statusDisplay.setText("Ephemeris Update Stopped");
-                            displayed = true; //has been displayed
-                            }
-                        }
-                        if(orbitTrace.isSelected()) //if orbit traces were displayed, need to redraw
-                        {
-                            for(int i = 0; i<input.getSize(); i++)
+                            if(satHash.get(input.getSatelliteName(i)).isDisplayed())
                             {
-                                if(satHash.get(input.getSatelliteName(i)).isDisplayed())
-                                {
-                                satHash.get(input.getSatelliteName(i)).setShow3DOrbitTrace(true);
-                                satHash.get(input.getSatelliteName(i)).setShow3DOrbitTraceECI(true);
-                                satHash.get(input.getSatelliteName(i)).setShowGroundTrack(true);
-                                }
+                            satHash.get(input.getSatelliteName(i)).setShow3DOrbitTrace(true);
+                            satHash.get(input.getSatelliteName(i)).setShow3DOrbitTraceECI(true);
+                            satHash.get(input.getSatelliteName(i)).setShowGroundTrack(true);
                             }
-                            forceRepainting();
-                            orbitShown = true;
                         }
-                        else //Need to prevent orbit traces from showing if they aren't supposed to be
+                        forceRepainting();
+                        orbitShown = true;
+                    }
+                    else //Need to prevent orbit traces from showing if they aren't supposed to be
+                    {
+                        for(int i = 0; i<input.getSize(); i++)
                         {
-                            for(int i = 0; i<input.getSize(); i++)
+                            if(satHash.get(input.getSatelliteName(i)).isDisplayed())
                             {
-                                if(satHash.get(input.getSatelliteName(i)).isDisplayed())
-                                {
-                                satHash.get(input.getSatelliteName(i)).setShow3DOrbitTrace(false);
-                                satHash.get(input.getSatelliteName(i)).setShow3DOrbitTraceECI(false);
-                                satHash.get(input.getSatelliteName(i)).setShowGroundTrack(false);
-                                }
+                            satHash.get(input.getSatelliteName(i)).setShow3DOrbitTrace(false);
+                            satHash.get(input.getSatelliteName(i)).setShow3DOrbitTraceECI(false);
+                            satHash.get(input.getSatelliteName(i)).setShowGroundTrack(false);
                             }
-                            orbitShown = false;
-                            forceRepainting(); 
                         }
-                    }//Action performed
-                }); //Timer
-        if(update) //Start timer
-        {eTimer.start();}
-    }
+                        orbitShown = false;
+                        forceRepainting(); 
+                    }}
+                    catch(Exception e)
+                    {}
+                }//Action performed
+            }); //Timer
+    if(update) //Start timer
+    {eTimer.start();}
+    
 }
 
 //Animates the applet
@@ -1443,6 +1445,10 @@ public void WWsetMJD(double mjd)
             }
             reader = new StkEphemerisReader(); //initialize ephemeris reader
             double tempTime;
+            double maxTempTime = 0;
+            double date = this.getCurrentJulTime();
+            double currentMJDtime = date - AstroConst.JDminusMJD;
+            double deltaTT2UTC = Time.deltaT(currentMJDtime); // = TT - UTC
             for (int i = 0; i <n; i++)
             {	//For each satellite
                     AbstractSatellite S = satHash.get(input.getSatelliteName(i));
@@ -1491,6 +1497,11 @@ public void WWsetMJD(double mjd)
                             time = tempTime; //Set time to earlier time
                         }
                     }
+                    tempTime = vector.get(vector.size()-1).state[0] - deltaTT2UTC;
+                    if(tempTime > maxTempTime) //If this ephemeris time is greater than others
+                    {
+                        maxTempTime = tempTime; //Set as max ephemeris time
+                    }
                     S.setEphemeris(vector); //set ephemeris for each satellite
                     // set default 3d model and turn on the use of 3d models: CURRENTLY UNAVAILABLE
 //                    S.setThreeDModelPath("globalstar/Globalstar.3ds");
@@ -1505,12 +1516,13 @@ public void WWsetMJD(double mjd)
                     }
             }
             double scenarioTime = input.getTime(); //Get user input time
-            if(scenarioTime>=time) //If user input time is greater than time in ephemeris
+            if(scenarioTime>=time && scenarioTime < maxTempTime|| overrideTime) //If user input time is greater than time in ephemeris
             {
                 if(!overrideTime) //If time needs to be updated
                 {
                 time = scenarioTime; //set time to user input time
                 setTime(time);
+                inputSat = true;
                 }
             //step one second forward than go back to original time...fixes dissapearance? 
             double temp = currentJulianDate.getJulianDate();
@@ -1529,17 +1541,6 @@ public void WWsetMJD(double mjd)
                 currentJulianDate.update2CurrentTime(); //Set to current time
                 setTime(currentJulianDate.getJulianDate());
                 }
-                play = false;
-            }
-            else if(satHash.get(input.getSatelliteName(n)).getEphemeris() == null)
-            {//Requested time past that of epehmeris data
-                statusDisplay.setText("Requested time not within ephemeris range");
-                if(!overrideTime) //If time needs to be updated
-                {
-                time = scenarioTime; //Set time to requested time
-                setTime(time);
-                }
-                inputSat = false; //No satellites
                 play = false;
             }
             else
