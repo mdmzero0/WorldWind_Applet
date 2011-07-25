@@ -34,10 +34,6 @@ import gov.nasa.worldwind.render.DrawContext;
 import gov.nasa.worldwind.util.Logging;
 import gov.nasa.worldwind.util.RestorableSupport;
 
-import gov.nasa.worldwind.view.AbstractView;
-import gov.nasa.worldwind.view.BasicOrbitViewModel;
-import gov.nasa.worldwind.view.OrbitView;
-import gov.nasa.worldwind.view.orbit.*;
 import gov.nasa.worldwind.view.*;
 import gov.nasa.worldwind.view.OrbitViewCollisionSupport;
 import gov.nasa.worldwind.view.OrbitViewLimits;
@@ -174,11 +170,13 @@ public class BasicModelView3 extends AbstractView implements OrbitView
             setFieldOfView(Angle.fromDegrees(initFov));
     }
 
+    @Override
     public Position getCenterPosition()
     {
         return this.center;
     }
 
+    @Override
     public void setCenterPosition(Position center)
     {
         if (center == null)
@@ -198,11 +196,13 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         resolveCollisionsWithCenterPosition();
     }
 
+    @Override
     public Angle getHeading()
     {
         return this.heading;
     }
 
+    @Override
     public void setHeading(Angle heading)
     {
         if (heading == null)
@@ -216,11 +216,13 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         resolveCollisionsWithPitch();
     }
 
+    @Override
     public Angle getPitch()
     {
         return this.pitch;
     }
 
+    @Override
     public void setPitch(Angle pitch)
     {
         if (pitch == null)
@@ -242,11 +244,13 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         resolveCollisionsWithPitch();
     }
 
+    @Override
     public double getZoom()
     {
         return this.zoom;
     }
 
+    @Override
     public void setZoom(double zoom)
     {
         if (zoom < 0)
@@ -260,6 +264,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         resolveCollisionsWithCenterPosition();
     }
 
+    @Override
     public OrbitViewModel getOrbitViewModel()
     {
         return this.orbitViewModel;
@@ -335,6 +340,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         }
     }
 
+    @Override
     public boolean canFocusOnViewportCenter()
     {
         return this.dc != null
@@ -342,6 +348,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
             && this.globe != null;
     }
 
+    @Override
     public void focusOnViewportCenter()
     {
         if (this.dc == null)
@@ -400,11 +407,13 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         }
     }
 
+    @Override
     public void stopMovementOnCenter()
     {
         firePropertyChange(CENTER_STOPPED, null, null);
     }
 
+    @Override
     public Position getEyePosition()
     {
         if (this.lastEyePosition == null)
@@ -412,6 +421,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         return this.lastEyePosition;
     }
 
+    @Override
     public void setEyePosition(Position eyePosition)
     {
         if (eyePosition == null)
@@ -435,6 +445,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         resolveCollisionsWithCenterPosition();
     }
 
+    @Override
     public Position getCurrentEyePosition()
     {
         if (this.globe != null)
@@ -455,6 +466,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         return Position.ZERO;
     }
 
+    @Override
     public void setOrientation(Position eyePosition, Position centerPosition)
     {
         if (eyePosition == null || centerPosition == null)
@@ -517,6 +529,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         setModelCoordinates(modelCoords);
     }
 
+    @Override
     public Vec4 getEyePoint()
     {
         if (this.lastEyePoint == null)
@@ -524,6 +537,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         return this.lastEyePoint;
     }
 
+    @Override
     public Vec4 getCurrentEyePoint()
     {
         if (this.globe != null)
@@ -543,6 +557,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         return Vec4.ZERO;
     }
 
+    @Override
     public Vec4 getUpVector()
     {
         if (this.lastUpVector == null)
@@ -550,6 +565,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         return this.lastUpVector;
     }
 
+    @Override
     public Vec4 getForwardVector()
     {
         if (this.lastForwardVector == null)
@@ -557,16 +573,19 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         return this.lastForwardVector;
     }
 
+    @Override
     public Matrix getModelviewMatrix()
     {
         return this.modelview;
     }
 
+    @Override
     public Angle getFieldOfView()
     {
         return this.fieldOfView;
     }
 
+    @Override
     public void setFieldOfView(Angle fieldOfView)
     {
         if (fieldOfView == null)
@@ -579,21 +598,25 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         this.fieldOfView = fieldOfView;
     }
 
+    @Override
     public double getNearClipDistance()
     {
         return this.nearClipDistance;
     }
 
+    @Override
     public void setNearClipDistance(double distance)
     {
         this.nearClipDistance = distance;
     }
 
+    @Override
     public double getFarClipDistance()
     {
         return this.farClipDistance;
     }
 
+    @Override
     public void setFarClipDistance(double distance)
     {
         this.farClipDistance = distance;
@@ -634,17 +657,20 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         return far < MINIMUM_FAR_DISTANCE ? MINIMUM_FAR_DISTANCE : far;
     }
     
+    @Override
     public java.awt.Rectangle getViewport()
     {
         // java.awt.Rectangle is mutable, so we defensively copy the viewport.
         return new java.awt.Rectangle(this.viewport);
     }
 
+    @Override
     public Frustum getFrustum()
     {
         return this.frustum;
     }
 
+    @Override
     public Frustum getFrustumInModelCoordinates()
     {
         if (this.lastFrustumInModelCoords == null)
@@ -658,11 +684,13 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         return this.lastFrustumInModelCoords;
     }
 
+    @Override
     public Matrix getProjectionMatrix()
     {
         return this.projection;
     }
 
+    @Override
     protected void doApply(DrawContext dc)
     {
         if (dc == null)
@@ -755,6 +783,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         this.lastFrustumInModelCoords = null;
     }
 
+    @Override
     public Vec4 project(Vec4 modelPoint)
     {
         if (modelPoint == null)
@@ -767,6 +796,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         return this.viewSupport.project(modelPoint, this.modelview, this.projection, this.viewport);
     }
 
+    @Override
     public Vec4 unProject(Vec4 windowPoint)
     {
         if (windowPoint == null)
@@ -779,11 +809,13 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         return this.viewSupport.unProject(windowPoint, this.modelview, this.projection, this.viewport);
     }
 
+    @Override
     public Line computeRayFromScreenPoint(double x, double y)
     {
         return this.viewSupport.computeRayFromScreenPoint(x, y, this.modelview, this.projection, this.viewport);
     }
 
+    @Override
     public Position computePositionFromScreenPoint(double x, double y)
     {
         if (this.globe != null)
@@ -796,11 +828,13 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         return null;
     }
 
+    @Override
     public double computePixelSizeAtDistance(double distance)
     {
         return this.viewSupport.computePixelSizeAtDistance(distance, this.fieldOfView, this.viewport);
     }
 
+    @Override
     public double computeHorizonDistance()
     {
         double horizon = 0;
@@ -863,6 +897,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
             && modelCoords.getZoom() >= 0);
     }
 
+    @Override
     public String getRestorableState()
     {
         RestorableSupport rs = RestorableSupport.newRestorableSupport();
@@ -903,6 +938,7 @@ public class BasicModelView3 extends AbstractView implements OrbitView
         return rs.getStateAsXml();
     }
 
+    @Override
     public void restoreState(String stateInXml)
     {
         if (stateInXml == null)
@@ -1032,11 +1068,13 @@ public class BasicModelView3 extends AbstractView implements OrbitView
 
     // new methods added to BasicOrbitView / (OrbitView) but not implemented here
     // see BasicOrbitView.java for details on how this could be added
+    @Override
     public void setOrbitViewLimits(OrbitViewLimits viewLimits)
     {
         this.orbitViewLimits = viewLimits;
     }
 
+    @Override
     public OrbitViewLimits getOrbitViewLimits()
     {
         return orbitViewLimits;

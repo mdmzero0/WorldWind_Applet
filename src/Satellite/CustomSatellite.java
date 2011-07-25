@@ -24,9 +24,7 @@ package Satellite;
 import gov.nasa.worldwind.geom.Angle;
 import gov.nasa.worldwind.geom.Position;
 import java.awt.Color;
-import java.awt.Toolkit;
 import java.util.Vector;
-import javax.swing.ImageIcon;
 //import jsattrak.customsat.InitialConditionsNode;
 //import jsattrak.customsat.PropogatorNode;
 //import jsattrak.customsat.StopNode;
@@ -40,7 +38,6 @@ import Utilities.LagrangeInterp;
 //import name.gano.swingx.treetable.CustomTreeTableNode;
 import Utilities.J2kCoordinateConversion;
 import net.java.joglutils.model.ModelFactory;
-import org.jdesktop.swingx.treetable.DefaultTreeTableModel;
 
 /**
  * NOTE !!!!!!!!  -- internal time for epehemeris is TT time all input times UTC
@@ -117,6 +114,7 @@ public class CustomSatellite  extends AbstractSatellite
     private transient WWModel3D_new threeDModel; // DO NOT STORE when saving -- need to reload this -- TOO MUCH DATA!
     private double threeDModelSizeFactor = 300000;
     
+    private boolean displayed = true;
 //    // Constructors
 //    public CustomSatellite()
 //    {
@@ -343,7 +341,7 @@ public class CustomSatellite  extends AbstractSatellite
                 
                 //isInTime = true;
             //System.out.println("true");
-
+            displayed = true;
             }
             else // not in the timeFrame
             {
@@ -367,6 +365,7 @@ public class CustomSatellite  extends AbstractSatellite
                 
                 //isInTime = false;
                 //System.out.println("false1");
+                displayed = false;
             }
 
         }
@@ -380,6 +379,7 @@ public class CustomSatellite  extends AbstractSatellite
         
     } // propogate2JulDate
     
+    @Override
      public double getSatTleEpochJulDate()
     {
         if(ephemeris.size() > 0)
@@ -397,6 +397,7 @@ public class CustomSatellite  extends AbstractSatellite
      * @param julDate - julian date
      * @return j2k position of satellite in meters
      */
+    @Override
     public double[] calculateTemePositionFromUT(double julDate)
     {      
         double[] j2kPosTemp = calculateJ2KPositionFromUT(julDate);
@@ -705,6 +706,7 @@ public class CustomSatellite  extends AbstractSatellite
     // other functions ================
     
     // returns satellite's current perdiod based on current pos/vel in Minutes
+    @Override
     public double getPeriod()
     {
         if(j2kPos != null)
@@ -717,6 +719,7 @@ public class CustomSatellite  extends AbstractSatellite
         }
     }
     
+    @Override
     public double[] getKeplarianElements()
     {
         return Kepler.SingularOsculatingElements( AstroConst.GM_Earth, j2kPos, j2kVel ); 
@@ -725,6 +728,7 @@ public class CustomSatellite  extends AbstractSatellite
     
     // GET SET methods =================
     
+    @Override
      public void setShowGroundTrack(boolean showGrndTrk)
     {
         showGroundTrack = showGrndTrk;
@@ -746,11 +750,13 @@ public class CustomSatellite  extends AbstractSatellite
         }
     }
     
+    @Override
     public boolean getShowGroundTrack()
     {
         return showGroundTrack;
     }
     
+    @Override
     public double getLatitude()
     {
         if(lla != null)
@@ -759,6 +765,7 @@ public class CustomSatellite  extends AbstractSatellite
             return 180; // not possible latitide
     }
     
+    @Override
     public double getLongitude()
     {
         if(lla != null)
@@ -767,6 +774,7 @@ public class CustomSatellite  extends AbstractSatellite
             return 270; // not possible long
     }
     
+    @Override
     public double getAltitude()
     {
         if(lla != null)
@@ -775,6 +783,7 @@ public class CustomSatellite  extends AbstractSatellite
             return 0;
     }
     
+    @Override
     public double[] getLLA()
     {
         if(lla == null)
@@ -785,11 +794,13 @@ public class CustomSatellite  extends AbstractSatellite
         return lla.clone();
     }
     
+    @Override
     public double getCurrentJulDate()
     {
         return currentJulianDate;
     }
     
+    @Override
     public double[] getJ2000Position()
     {
         if(j2kPos == null)
@@ -799,6 +810,7 @@ public class CustomSatellite  extends AbstractSatellite
         return j2kPos.clone();
     }
     
+    @Override
     public double[] getJ2000Velocity()
     {
         if(j2kVel == null)
@@ -808,32 +820,38 @@ public class CustomSatellite  extends AbstractSatellite
         return j2kVel.clone();
     }
     
+    @Override
     public boolean getPlot2D()
     {
         return plot2d;
     }
     
+    @Override
     public Color getSatColor()
     { 
         return satColor;
     }
     
+    @Override
     public boolean getPlot2DFootPrint()
     {
         return plot2DFootPrint;
     }
     
+    @Override
     public boolean getGroundTrackIni()
     {
         return groundTrackIni;
     }
     
+    @Override
     public void setGroundTrackIni2False()
     {
         // forces repaint of ground track next update
         groundTrackIni = false;
     }
     
+    @Override
     public int getNumGroundTrackLeadPts()
     {
         if(latLongLead != null)
@@ -842,6 +860,7 @@ public class CustomSatellite  extends AbstractSatellite
             return 0;
     }
         
+    @Override
     public int getNumGroundTrackLagPts()
     {
         if(latLongLag != null)
@@ -850,116 +869,139 @@ public class CustomSatellite  extends AbstractSatellite
             return 0;
     }
         
+    @Override
     public double[] getGroundTrackLlaLeadPt(int index)
     {
         return new double[] {latLongLead[index][0],latLongLead[index][1],latLongLead[index][2]};
     }
     
+    @Override
     public double[] getGroundTrackLlaLagPt(int index)
     {
         return new double[] {latLongLag[index][0],latLongLag[index][1],latLongLag[index][2]};
     }
     
+    @Override
     public double[] getGroundTrackXyzLeadPt(int index)
     {
         return new double[] {getTemePosLead()[index][0],getTemePosLead()[index][1],getTemePosLead()[index][2]};
     }
     
+    @Override
     public double[] getGroundTrackXyzLagPt(int index)
     {
         return new double[] {getTemePosLag()[index][0],getTemePosLag()[index][1],getTemePosLag()[index][2]};
     }
         
+    @Override
     public String getName()
     {
         return name;
     }
     
+    @Override
     public double getTleEpochJD()
     {
         return tleEpochJD; // returns -1 since there is no TLE
     }
     
+    @Override
     public double getTleAgeDays()
     {
         return 0;//currentJulianDate - tleEpochJD; // SEG returns 0 since really there is no TLE!!
     }
 
+    @Override
     public int getNumPtsFootPrint()
     {
         return numPtsFootPrint;
     }
 
+    @Override
     public void setNumPtsFootPrint(int numPtsFootPrint)
     {
         this.numPtsFootPrint = numPtsFootPrint;
     }
 
+    @Override
     public boolean isShowName2D()
     {
         return showName2D;
     }
 
+    @Override
     public void setShowName2D(boolean showName2D)
     {
         this.showName2D = showName2D;
     }
 
+    @Override
     public boolean isFillFootPrint()
     {
         return fillFootPrint;
     }
 
+    @Override
     public void setFillFootPrint(boolean fillFootPrint)
     {
         this.fillFootPrint = fillFootPrint;
     }
 
+    @Override
     public int getGrnTrkPointsPerPeriod()
     {
         return grnTrkPointsPerPeriod;
     }
 
+    @Override
     public void setGrnTrkPointsPerPeriod(int grnTrkPointsPerPeriod)
     {
         this.grnTrkPointsPerPeriod = grnTrkPointsPerPeriod;
     }
 
+    @Override
     public double getGroundTrackLeadPeriodMultiplier()
     {
         return groundTrackLeadPeriodMultiplier;
     }
 
+    @Override
     public void setGroundTrackLeadPeriodMultiplier(double groundTrackLeadPeriodMultiplier)
     {
         this.groundTrackLeadPeriodMultiplier = groundTrackLeadPeriodMultiplier;
     }
 
+    @Override
     public double getGroundTrackLagPeriodMultiplier()
     {
         return groundTrackLagPeriodMultiplier;
     }
 
+    @Override
     public void setGroundTrackLagPeriodMultiplier(double groundTrackLagPeriodMultiplier)
     {
         this.groundTrackLagPeriodMultiplier = groundTrackLagPeriodMultiplier;
     }
 
+    @Override
     public void setPlot2d(boolean plot2d)
     {
         this.plot2d = plot2d;
     }
 
+    @Override
     public void setSatColor(Color satColor)
     {
         this.satColor = satColor;
     }
 
+    @Override
     public void setPlot2DFootPrint(boolean plot2DFootPrint)
     {
         this.plot2DFootPrint = plot2DFootPrint;
     }
 
+    @Override
     public double[] getTEMEPos()
     {
         if(posTEME == null)
@@ -970,84 +1012,100 @@ public class CustomSatellite  extends AbstractSatellite
         return posTEME.clone();
     }
 
+    @Override
     public boolean isShow3DOrbitTrace()
     {
         return show3DOrbitTrace;
     }
 
+    @Override
     public void setShow3DOrbitTrace(boolean show3DOrbitTrace)
     {
         this.show3DOrbitTrace = show3DOrbitTrace;
     }
 
+    @Override
     public boolean isShow3DFootprint()
     {
         return show3DFootprint;
     }
 
+    @Override
     public void setShow3DFootprint(boolean show3DFootprint)
     {
         this.show3DFootprint = show3DFootprint;
     }
 
+    @Override
     public boolean isShow3DName()
     {
         return show3DName;
     }
 
+    @Override
     public void setShow3DName(boolean show3DName)
     {
         this.show3DName = show3DName;
     }
 
+    @Override
     public boolean isShowGroundTrack3d()
     {
         return showGroundTrack3d;
     }
 
+    @Override
     public void setShowGroundTrack3d(boolean showGroundTrack3d)
     {
         this.showGroundTrack3d = showGroundTrack3d;
     }
 
+    @Override
     public boolean isShow3DOrbitTraceECI()
     {
         return show3DOrbitTraceECI;
     }
 
+    @Override
     public void setShow3DOrbitTraceECI(boolean show3DOrbitTraceECI)
     {
         this.show3DOrbitTraceECI = show3DOrbitTraceECI;
     }
 
+    @Override
     public boolean isShow3D()
     {
         return show3D;
     }
 
+    @Override
     public void setShow3D(boolean show3D)
     {
         this.show3D = show3D;
     }
 
     // lagging lat/long coordinates for ground track
+    @Override
     public double[][] getTemePosLead()
     {
         return temePosLead;
     }
 
     // leading Mean of date position coordinates for ground track
+    @Override
     public double[][] getTemePosLag()
     {
         return temePosLag;
     }
 
+    @Override
     public // lagging Mean of date position coordinates for ground track
     double[] getTimeLead()
     {
         return timeLead;
     }
 
+    @Override
     public // array for holding times associated with lead coordinates (Jul Date)
     double[] getTimeLag()
     {
@@ -1069,6 +1127,7 @@ public class CustomSatellite  extends AbstractSatellite
     }
     
     // set ephemeris
+    @Override
     public void setEphemeris(Vector<StateVector> e)
     {
         this.ephemeris = e;
@@ -1164,11 +1223,13 @@ public class CustomSatellite  extends AbstractSatellite
     } // secantMethod
     
     // 3D model -------------------------
+    @Override
     public boolean isUse3dModel()
     {
         return use3dModel; 
     }
     
+    @Override
     public void setUse3dModel(boolean use3dModel)
     {
         this.use3dModel = use3dModel;
@@ -1184,6 +1245,7 @@ public class CustomSatellite  extends AbstractSatellite
         }
     }
     
+    @Override
     public String getThreeDModelPath()
     {
         return threeDModelPath;
@@ -1193,6 +1255,7 @@ public class CustomSatellite  extends AbstractSatellite
      * Relative path to the model -- relative from "user.dir"/data/models/
      * @param path
      */
+    @Override
     public void setThreeDModelPath(String path)
     {
         if(use3dModel && !(path.equalsIgnoreCase(this.threeDModelPath)) )
@@ -1229,11 +1292,13 @@ public class CustomSatellite  extends AbstractSatellite
             }
     }
     
+    @Override
     public WWModel3D_new getThreeDModel()
     {
         return threeDModel;
     }    
     
+    @Override
     public  double[] getTEMEVelocity()
     {
         if(velTEME == null)
@@ -1243,11 +1308,13 @@ public class CustomSatellite  extends AbstractSatellite
         return velTEME.clone();
     }
 
+    @Override
     public double getThreeDModelSizeFactor()
     {
         return threeDModelSizeFactor;
     }
 
+    @Override
     public void setThreeDModelSizeFactor(double modelSizeFactor)
     {
         // should the 3D model be reloaded now?
@@ -1267,5 +1334,10 @@ public class CustomSatellite  extends AbstractSatellite
     public String toString()
     {
         return this.getName();
+    }
+    @Override
+    public boolean isDisplayed()
+    {
+        return displayed;
     }
 }

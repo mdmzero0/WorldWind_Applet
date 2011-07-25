@@ -22,8 +22,6 @@
  */
 package Utilities;
 
-import Utilities.StateVector;
-
 public class Kepler
 {
 	

@@ -54,6 +54,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
     private boolean isDragging = false;
     private javax.swing.Timer hoverTimer = new javax.swing.Timer(600, new ActionListener()
     {
+        @Override
         public void actionPerformed(ActionEvent actionEvent)
         {
             if (BasicModelViewInputHandler3.this.pickMatches(BasicModelViewInputHandler3.this.hoverObjects))
@@ -81,6 +82,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
     }
 
     // -- after upgrade to WWJ v0.6
+    @Override
     public void dispose()
     {
         this.hoverTimer.stop();
@@ -97,6 +99,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         this.objectsAtButtonPress = null;
     }
 
+    @Override
     public void setEventSource(WorldWindow newWorldWindow)
     {
         if (newWorldWindow != null && !(newWorldWindow instanceof Component))
@@ -138,6 +141,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
 
         selectListener = new SelectListener()
         {
+            @Override
             public void selected(SelectEvent event)
             {
                 if (event.getEventAction().equals(SelectEvent.ROLLOVER))
@@ -156,16 +160,19 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         this.wwd.removeSelectListener(selectListener);
     }
 
+    @Override
     public WorldWindow getEventSource()
     {
         return this.wwd;
     }
 
+    @Override
     public void setHoverDelay(int delay)
     {
         this.hoverTimer.setDelay(delay);
     }
 
+    @Override
     public int getHoverDelay()
     {
         return this.hoverTimer.getDelay();
@@ -251,6 +258,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         return viewInputBroker;
     }
 
+    @Override
     public void keyTyped(KeyEvent keyEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -266,6 +274,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         this.viewInputBroker.keyTyped(keyEvent);
     }
 
+    @Override
     public void keyPressed(KeyEvent keyEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -281,6 +290,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         this.viewInputBroker.keyPressed(keyEvent);
     }
 
+    @Override
     public void keyReleased(KeyEvent keyEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -296,6 +306,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         this.viewInputBroker.keyReleased(keyEvent);
     }
 
+    @Override
     public void mouseClicked(final MouseEvent mouseEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -351,6 +362,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         }
     }
 
+    @Override
     public void mousePressed(MouseEvent mouseEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -398,6 +410,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         }
     }
 
+    @Override
     public void mouseReleased(MouseEvent mouseEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -420,6 +433,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         this.cancelDrag();
     }
 
+    @Override
     public void mouseEntered(MouseEvent mouseEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -437,6 +451,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         this.cancelDrag();
     }
 
+    @Override
     public void mouseExited(MouseEvent mouseEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -454,6 +469,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         this.cancelDrag();
     }
 
+    @Override
     public void mouseDragged(MouseEvent mouseEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -499,6 +515,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         }
     }
 
+    @Override
     public void mouseMoved(MouseEvent mouseEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -527,6 +544,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         }
     }
 
+    @Override
     public void mouseWheelMoved(MouseWheelEvent mouseWheelEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -542,6 +560,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         this.viewInputBroker.mouseWheelMoved(mouseWheelEvent);
     }
 
+    @Override
     public void focusGained(FocusEvent focusEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -557,6 +576,7 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         this.viewInputBroker.focusGained(focusEvent);
     }
 
+    @Override
     public void focusLost(FocusEvent focusEvent)
     {
         if (this.wwd == null) // include this test to ensure any derived implementation performs it
@@ -663,11 +683,13 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         this.isDragging = false;
     }
 
+    @Override
     public void addSelectListener(SelectListener listener)
     {
         this.eventListeners.add(SelectListener.class, listener);
     }
 
+    @Override
     public void removeSelectListener(SelectListener listener)
     {
         this.eventListeners.remove(SelectListener.class, listener);
@@ -681,31 +703,37 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
         }
     }
 
+    @Override
     public void addMouseListener(MouseListener listener)
     {
         this.eventListeners.add(MouseListener.class, listener);
     }
 
+    @Override
     public void removeMouseListener(MouseListener listener)
     {
         this.eventListeners.remove(MouseListener.class, listener);
     }
 
+    @Override
     public void addMouseMotionListener(MouseMotionListener listener)
     {
         this.eventListeners.add(MouseMotionListener.class, listener);
     }
 
+    @Override
     public void removeMouseMotionListener(MouseMotionListener listener)
     {
         this.eventListeners.remove(MouseMotionListener.class, listener);
     }
 
+    @Override
     public void addMouseWheelListener(MouseWheelListener listener)
     {
         this.eventListeners.add(MouseWheelListener.class, listener);
     }
 
+    @Override
     public void removeMouseWheelListener(MouseWheelListener listener)
     {
         this.eventListeners.remove(MouseWheelListener.class, listener);
@@ -752,11 +780,13 @@ public class BasicModelViewInputHandler3 extends WWObjectImpl
     }
 
     // -- after upgrade to WWJ v0.6
+    @Override
     public void removeKeyListener(KeyListener listener)
     {
         this.eventListeners.remove(KeyListener.class, listener);
     }
 
+    @Override
      public void addKeyListener(KeyListener listener)
     {
         this.eventListeners.add(KeyListener.class, listener);
