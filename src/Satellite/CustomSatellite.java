@@ -114,6 +114,7 @@ public class CustomSatellite  extends AbstractSatellite
     private transient WWModel3D_new threeDModel; // DO NOT STORE when saving -- need to reload this -- TOO MUCH DATA!
     private double threeDModelSizeFactor = 300000;
     
+    private boolean displayed = true;
 //    // Constructors
 //    public CustomSatellite()
 //    {
@@ -340,7 +341,7 @@ public class CustomSatellite  extends AbstractSatellite
                 
                 //isInTime = true;
             //System.out.println("true");
-
+            displayed = true;
             }
             else // not in the timeFrame
             {
@@ -364,6 +365,7 @@ public class CustomSatellite  extends AbstractSatellite
                 
                 //isInTime = false;
                 //System.out.println("false1");
+                displayed = false;
             }
 
         }
@@ -1332,5 +1334,10 @@ public class CustomSatellite  extends AbstractSatellite
     public String toString()
     {
         return this.getName();
+    }
+    @Override
+    public boolean isDisplayed()
+    {
+        return displayed;
     }
 }
