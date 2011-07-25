@@ -96,6 +96,7 @@ public class WWJApplet extends JApplet
     Vector<StateVector> vector; //vector to read in satellite information from the ephemeris reader (located in inputSatellites)
     boolean timerOn = false; //Boolean to control whether real-time mode is on or off
     Timer eTimer; //Timer for automatic updating of user inputs
+    private boolean ignoreOverride = false; //Ignore override of time if original user input time was incorrect: change time when corrected
     
     private Time currentJulianDate = new Time(); // current sim or real time (Julian Date)
     private Time scenarioEpochDate = new Time(); //Time displayed in scenario
@@ -1434,7 +1435,7 @@ public void WWsetMJD(double mjd)
     
     //Adds user inputs to scenario, including satellites as well as scenario time if needed
     public void inputSatellites()
-    {       boolean ignoreOverride = false;
+    {
             //Read satellites
             try{
             input = new OnlineInput("http://localhost:8080/parameters_test.html"); //Reads user input
@@ -1518,10 +1519,11 @@ public void WWsetMJD(double mjd)
             double scenarioTime = input.getTime(); //Get user input time
             if(scenarioTime>=time && scenarioTime < maxTempTime|| overrideTime) //If user input time is greater than time in ephemeris
             {
+            time = scenarioTime; //set time to user input time
                 if(!overrideTime || ignoreOverride) //If time needs to be updated
                 {
-                time = scenarioTime; //set time to user input time
                 setTime(time);
+                play = true;
                 }
             //step one second forward than go back to original time...fixes dissapearance? 
             double temp = currentJulianDate.getJulianDate();
@@ -1531,7 +1533,6 @@ public void WWsetMJD(double mjd)
             setTime(gc.getTimeInMillis());
             statusDisplay.setText("Satellites Added");
             inputSat = true;
-            play = true;
             ignoreOverride = false;
             }
             else if(scenarioTime == 0.0) //Means user input read a bad time string
