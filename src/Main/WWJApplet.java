@@ -1437,13 +1437,10 @@ public void WWsetMJD(double mjd)
     {
             //Read satellites
             try{
-<<<<<<< HEAD
+
             input = new OnlineInput("http://localhost:8080/testsea.html");
             int n = input.getSize();
-=======
-            input = new OnlineInput("http://localhost:8080/parameters_test.html"); //Reads user input
-            int n = input.getSize(); //number of satellites in input
->>>>>>> 987b8058b8145ee776979f180a03df46d8183fb1
+
             for (int i = 0; i <n; i++)
             {
                 addCustomSat(input.getSatelliteName(i)); //Add each satellite
