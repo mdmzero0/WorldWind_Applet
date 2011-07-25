@@ -838,11 +838,11 @@ public void stepUpButtonActionPerformed(ActionEvent e)
              animationSimStepSeconds = steps[stepNumber+1];
              statusDisplay.setText("Step Size Increased");
              stepNumber = stepNumber+1;
+             tempStep = animationSimStepSeconds; //Save step size for switch between real-time and non-real time
         }
         else
         {statusDisplay.setText("Real Time Mode");}
-    //Save step size for switch between real-time and non-real time
-    tempStep = animationSimStepSeconds;
+
     stepDisplay.setText("" +animationSimStepSeconds);
     }
 }
@@ -857,11 +857,10 @@ public void stepDownButtonActionPerformed(ActionEvent e)
             animationSimStepSeconds = steps[stepNumber-1];
             statusDisplay.setText("Step Size Decreased");
             stepNumber = stepNumber-1;
+            tempStep = animationSimStepSeconds; //Save step size for switch between real-time and non-real time
         }
         else
         {statusDisplay.setText("Real Time Mode");}
-    //Save step size for switch between real and non-real time
-    tempStep = animationSimStepSeconds;
     stepDisplay.setText("" + animationSimStepSeconds);
     }
     else //Already at minimum step size
@@ -1564,7 +1563,7 @@ public void WWsetMJD(double mjd)
                 ignoreOverride = true;
             }
             }
-            catch(Exception e) //URL given in inputs does not connect to STK ephemeris file
+            catch(Exception e) //URL given in input does not connect to STK ephemeris file
             {statusDisplay.setText("No satellites found");
             inputSat = false; //No satellites
             if(!overrideTime || ignoreOverride) //If time needs to be updated
