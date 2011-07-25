@@ -1542,6 +1542,10 @@ public void WWsetMJD(double mjd)
                 setTime(currentJulianDate.getJulianDate());
                 }
                 play = false;
+                try //remove satellites that were added: don't display satellites if time is bad!
+                {satHash.clear();}
+                catch(Exception e)
+                {}
             }
             else
             {//Outside ephemeris time
