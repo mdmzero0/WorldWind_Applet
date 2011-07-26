@@ -102,17 +102,6 @@ public class WWJApplet extends JApplet
     private Time currentJulianDate = new Time(); // Current sim or real time (Julian Date)
     private Time scenarioEpochDate = new Time(); //Time displayed in scenario
     double time = 100000000000000.0; //Far too big- used to determine earliest ephemeris time
-<<<<<<< HEAD
-    private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss z"); //date format for scenario time strings
-    double oldTime; //time used when no longer in real-time mode (takes scenario back to last non-real time)
-    private boolean overrideTime = false; //prevents scenario from reverting to the user-input time when using automatically updating inputs
-    
-    //Animation
-    private int currentPlayDirection = 0; //-1 backward, 0 stop, 1 forwards
-    private double animationSimStepSeconds = 60.0; //step size (default is one minute)
-    private int animationRefreshRateMs = 50; //Refresh rate for step size (time in between steps)
-    private boolean canBePlayed = true; //Boolean to control whether scenario is playing or not (default true): true means scenario is ready to canBePlayed, false means not ready (playing already)
-=======
     private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss z"); //Date format for scenario time strings...Can add Milli Seconds 
     //With Format ("dd MMM yyyy HH:mm:ss.SSS z")
     double oldTime; //Time used when no longer in real-time mode (takes scenario back to last non-real time)
@@ -123,7 +112,6 @@ public class WWJApplet extends JApplet
     private double animationSimStepSeconds = 60.0; //Step Size (default is one minute)
     private int animationRefreshRateMs = 50; //Refresh rate for step size (time in between steps in milliseconds)
     private boolean canBePlayed = true; //Boolean to control whether scenario is playing or not (default true): true means scenario is ready to play, false means not ready (playing already)
->>>>>>> afef756515b5816901c9419537fabde5fb19d6ef
     private boolean inputSat = true; //Boolean for whether satellites have been input or not
     private boolean end = false; //Boolean for end of ephemeris time (prevents scenario from running past the end of ephemeris)
     double[] steps = new double[] {1, 10, 30, 60, 120, 300, 1800, 3600, 7200, 86400}; //Step sizes
@@ -657,12 +645,8 @@ public class WWJApplet extends JApplet
         // Save Old Time
         double prevJulDate = currentJulianDate.getJulianDate();            
 
-<<<<<<< HEAD
-        //Adds seconds (canBePlayed direction should be 1 or 0)
-=======
         //Adds seconds (play direction should be 1 or 0)
         //This is where the actual Stepping occurs
->>>>>>> afef756515b5816901c9419537fabde5fb19d6ef
         currentJulianDate.addSeconds( currentPlayDirection*animationSimStepSeconds );
         // Update sun position
         sun.setCurrentMJD(currentJulianDate.getMJD());
@@ -792,11 +776,7 @@ public void playButtonActionPerformed(ActionEvent e)
 //Pause scenario
 public void pauseButtonActionPerformed(ActionEvent e)
 {
-<<<<<<< HEAD
-    //If canBePlayed: means scenario can be played (Isn't already playing)
-=======
     //If play: means scenario can be played (Aka isn't already playing)
->>>>>>> afef756515b5816901c9419537fabde5fb19d6ef
     if(canBePlayed)
     {}
     //Scenario is playing
@@ -1010,13 +990,8 @@ private void realTimeActionPerformed(ActionEvent evt)
         stepDisplay.setText("" + animationSimStepSeconds);
         statusDisplay.setText("Non-real Time Mode");
         animateApplet(false); // Stop playing
-<<<<<<< HEAD
-        canBePlayed = true; //ready to played (not playing)
-        reset = false; //not reset
-=======
         canBePlayed = true; //Ready to play (not playing)
         reset = false; //Not reset
->>>>>>> afef756515b5816901c9419537fabde5fb19d6ef
     }
 }
 private void orbitTraceActionPerformed(ActionEvent evt)
@@ -1156,23 +1131,6 @@ private void animateApplet(boolean b) {
                             canBePlayed = true;
                             statusDisplay.setText("End of Scenario");
                         }
-<<<<<<< HEAD
-                    if(!nonRealTime)
-                    {
-                        long sysTime = System.currentTimeMillis();
-                        GregorianCalendar g = currentJulianDate.getCurrentGregorianCalendar();
-                        long currentTime = g.getTimeInMillis();
-                        long timeDif = sysTime-currentTime;
-                        if(timeDif >= 10000)
-                                {
-                                    currentJulianDate.update2CurrentTime();
-                                }
-                        else if(timeDif <= 10000)
-                        {
-                            currentJulianDate.update2CurrentTime();
-                        }
-                    }
-=======
                      if(!nonRealTime)
                      {long time = System.currentTimeMillis();
                      GregorianCalendar g = currentJulianDate.getCurrentGregorianCalendar();
@@ -1184,8 +1142,6 @@ private void animateApplet(boolean b) {
                          setTime(currentJulianDate.getJulianDate());
                                           }
                                }
-                     
->>>>>>> afef756515b5816901c9419537fabde5fb19d6ef
                     // take one time step in the animation
                     currentPlayDirection = 1;
                     updateTime(); // animate
@@ -1194,11 +1150,7 @@ private void animateApplet(boolean b) {
         playTimer.start();
     }
         else
-<<<<<<< HEAD
-        { //Should not canBePlayed!
-=======
         { //Should not play!
->>>>>>> afef756515b5816901c9419537fabde5fb19d6ef
             if(canBePlayed)
             {}
             else
@@ -1500,7 +1452,7 @@ public void WWsetMJD(double mjd)
             //Read satellites
             try{
 
-            input = new OnlineInput("http://localhost:8080/testsea.html");
+            input = new OnlineInput("http://localhost:8080/parameters_test.html");
             int n = input.getSize();
 
             for (int i = 0; i <n; i++)
