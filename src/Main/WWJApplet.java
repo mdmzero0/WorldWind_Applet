@@ -46,7 +46,7 @@ import View.*;
 import gov.nasa.worldwind.awt.AWTInputHandler;
 import java.util.Random;
 
-
+import java.lang.Math;
 /**
  * Illustrates the how to display a World Wind <code>{@link WorldWindow}</code> in a Java Applet and interact with the
  * WorldWindow through JavaScript code running in the browser. This class extends <code>{@link JApplet}</code> and
@@ -66,16 +66,17 @@ import java.util.Random;
  */
 public class WWJApplet extends JApplet
 {
-    protected WorldWindowGLCanvas wwd; //from original applet code- this is World Wind
+    protected WorldWindowGLCanvas wwd; //From original applet code- this is World Wind
     protected RenderableLayer labelsLayer; //Right now unimportant- does nothing
     private ViewControlsLayer viewControlsLayer; //Layer for the little buttons in the bottom right (controls view)
     private Model m; //This is the globe itself
     
     private Sun sun; //Self explanatory
     private SunPositionProvider spp; //Changes the position of the sun based on time
-    private boolean sunShadingOn = false; // controls if sun shading is used
-    private StarsLayer starsLayer; //need this to change size of star layer
-    private LensFlareLayer lensFlareLayer; //creates the lens flare (needed to make sun visible)
+    private boolean sunShadingOn = false; // Controls if sun shading is used and... 
+    //Set false because Sun Shading does not work on Windows 7, issues with RectangularNormalTessalator so it is no longer being used
+    private StarsLayer starsLayer; //Need this to change size of star layer  (Problem with Reduced View so it is now 10x larger)
+    private LensFlareLayer lensFlareLayer; //Creates the lens flare (Needed to make sun visible)
     
     //Making ECI/ECEF Layer
     private ECIRenderableLayer eciLayer; //Earth Centered Inertial layer- satellites are added to this
@@ -84,35 +85,36 @@ public class WWJApplet extends JApplet
     private ECEFRenderableLayer ecefLayer; //Earth Centered Earth Fixed layer
     private ECEFModelRenderable ecefModel; //Model for satellites and their orbits
     private boolean viewModeECI = true; //Boolean controls if ECI or ECEF view (used in WWsetMJD)
-    private EcefTimeDepRenderableLayer timeDepLayer; //layer of time dependent objects in ECEF?
+    private EcefTimeDepRenderableLayer timeDepLayer; //Layer of time dependent objects in ECEF? Unsure whether this is useful.
     
     //Satellites
-    private Hashtable<String,AbstractSatellite> satHash = new Hashtable<String,AbstractSatellite>(); //this table stores each satellite added to the program (Satellites MUST be added)
+    private Hashtable<String,AbstractSatellite> satHash = new Hashtable<String,AbstractSatellite>(); //This table stores each satellite added to the program (Satellites MUST be added)
     private StkEphemerisReader reader = new StkEphemerisReader(); //Reader for STK ephemeris files (only STK format)
-    private OnlineInput input; //Custom-made class to aquire user inputs
+    private OnlineInput input; //Custom-made class to aquire user inputs (Currently html file as a test)
     Vector<JSatTrakTimeDependent> timeDependentObjects = new Vector<JSatTrakTimeDependent>(); //Time dependent objects
     private boolean orbitShown = true; //Boolean to control whether orbit traces are shown
     private boolean update = false; //Boolean to control whether user input should automatically update or load only once (default is once)
-    Vector<StateVector> vector; //vector to read in satellite information from the ephemeris reader (located in inputSatellites)
+    Vector<StateVector> vector; //Vector to read in satellite information from the ephemeris reader (located in inputSatellites)
     boolean timerOn = false; //Boolean to control whether real-time mode is on or off
     Timer eTimer; //Timer for automatic updating of user inputs
     private boolean ignoreOverride = false; //Ignore override of time if original user input time was incorrect: change time when corrected
     
-    private Time currentJulianDate = new Time(); // current sim or real time (Julian Date)
+    private Time currentJulianDate = new Time(); // Current sim or real time (Julian Date)
     private Time scenarioEpochDate = new Time(); //Time displayed in scenario
     double time = 100000000000000.0; //Far too big- used to determine earliest ephemeris time
-    private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss.SSS z"); //date format for scenario time strings
-    double oldTime; //time used when no longer in real-time mode (takes scenario back to last non-real time)
-    private boolean overrideTime = false; //prevents scenario from reverting to the user-input time when using automatically updating inputs
+    private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss z"); //Date format for scenario time strings...Can add Milli Seconds 
+    //With Format ("dd MMM yyyy HH:mm:ss.SSS z")
+    double oldTime; //Time used when no longer in real-time mode (takes scenario back to last non-real time)
+    private boolean overrideTime = false; //Prevents scenario from reverting to the user-input time when using automatically updating inputs
     
     //Animation
     private int currentPlayDirection = 0; //-1 backward, 0 stop, 1 forwards
-    private double animationSimStepSeconds = 60.0; //step size (default is one minute)
-    private int animationRefreshRateMs = 50; //Refresh rate for step size (time in between steps)
-    private boolean play = true; //Boolean to control whether scenario is playing or not (default true): true means scenario is ready to play, false means not ready (playing already)
+    private double animationSimStepSeconds = 60.0; //Step Size (default is one minute)
+    private int animationRefreshRateMs = 50; //Refresh rate for step size (time in between steps in milliseconds)
+    private boolean canBePlayed = true; //Boolean to control whether scenario is playing or not (default true): true means scenario is ready to play, false means not ready (playing already)
     private boolean inputSat = true; //Boolean for whether satellites have been input or not
     private boolean end = false; //Boolean for end of ephemeris time (prevents scenario from running past the end of ephemeris)
-    double[] steps = new double[] {1, 10, 30, 60, 120, 300, 1800, 3600, 7200, 86400}; //step sizes
+    double[] steps = new double[] {1, 10, 30, 60, 120, 300, 1800, 3600, 7200, 86400}; //Step sizes
     int stepNumber = 3; //Index for the current step size in the array (starts at index of zero, so 3 corresponds to a step size of 60)
     private Timer playTimer; //Timer for animation of scenario
     private boolean twoDon = false; //Boolean to control 2D and 3D modes
@@ -123,9 +125,9 @@ public class WWJApplet extends JApplet
     private boolean displayed = false; //Boolean to prevent text from being constantly displayed in status display during a loop
     
     //Buttons
-    JButton playScenario; //play scenario button
-    JButton pauseScenario; //pause scenario button
-    JButton resetScenario; //reset scenario button
+    JButton playScenario; //Play scenario button
+    JButton pauseScenario; //Pause scenario button
+    JButton resetScenario; //Reset scenario button
     JButton stepSizeUp; //Increase step size
     JButton stepSizeDown; //Decrease step size
     JRadioButton ECIon; //ECI mode
@@ -138,21 +140,22 @@ public class WWJApplet extends JApplet
     JRadioButton twoDbutton; //2D mode
     JRadioButton threeDbutton; //3D mode
     JCheckBox realTime; //Real time mode
-    JCheckBox orbitTrace; //display orbit trace
+    JCheckBox orbitTrace; //Display orbit trace
     JCheckBox eUpdate; //Automatic update mode
     
     Container Content = this.getContentPane(); //Container for applet - toolbar, world wind, and status bar added to this
     J2DEarthPanel twoDpanel; //2D panel
     
-    // view mode options
-    private boolean modelViewMode = false; // model view mode (not supported currently)
-    private String modelViewString = ""; // to hold name of satellite to view when modelViewMode=true
-    private double modelViewNearClip = 10000; // clipping plane for when in Model View mode
-    private double modelViewFarClip = 5.0E7; // max clipping plan for model view
-    private boolean smoothViewChanges = true; // for 3D view smoothing (only is set after model/earth view has been changed -needs to be fixed)
+    // View Mode Options
+    // Currently View Mode is not being used in the Applet
+    private boolean modelViewMode = false; // Model View Mode (not supported currently)
+    private String modelViewString = ""; // To hold name of satellite to view when modelViewMode=true
+    private double modelViewNearClip = 10000; // Clipping plane for when in Model View mode
+    private double modelViewFarClip = 5.0E7; // Max clipping plan for model view
+    private boolean smoothViewChanges = true; // For 3D view smoothing (only is set after model/earth view has been changed -needs to be fixed)
     // near/far clipping plane distances for 3d windows (can effect render speed and if full orbit is shown)
-    private double farClippingPlaneDistOrbit = -1;//200000000d; // good out to geo, but slow for LEO, using AutoClipping plane view I made works better
-    private double nearClippingPlaneDistOrbit = -1; // -1 value Means auto adjusting // value adjusted in World Wind source code
+    private double farClippingPlaneDistOrbit = -1;//200000000d; // Good out to geo, but slow for LEO, using AutoClipping plane view I made works better
+    private double nearClippingPlaneDistOrbit = -1; // -1 Value Means auto adjusting // value adjusted in World Wind source code
     
     public WWJApplet()
     {
@@ -199,14 +202,14 @@ public class WWJApplet extends JApplet
             //Call to function to set up the layers for the model
             setUpLayers();
             
-            // first call to update time to current time:
+            // First call to update time to current time:
             currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
 
-            // just a little touch up -- remove the milliseconds from the time
+            // Just a little touch up -- remove the milliseconds from the time
             int mil = currentJulianDate.get(Time.MILLISECOND);
-            currentJulianDate.add(Time.MILLISECOND,1000-mil); // remove the milliseconds (so it shows an even second)
+            currentJulianDate.add(Time.MILLISECOND,1000-mil); // Remove the milliseconds (so it shows an even second)
 
-            // set time string format
+            // Set time string format
             currentJulianDate.setDateFormat(dateformat);
             scenarioEpochDate.setDateFormat(dateformat);
             
@@ -298,12 +301,13 @@ public class WWJApplet extends JApplet
                 ecefButtonActionPerformed(evt);
             }}));
             toolbar.add(ECEFon);
-            //Connect the radio buttons (ECI and ECEF)
+            
+            //Connect the Radio Buttons (ECI and ECEF)
             ButtonGroup bg = new ButtonGroup();
             bg.add(ECIon);
             bg.add(ECEFon);    
                         
-            //two D view Button
+            //2D View Button
             twoDbutton = new JRadioButton("2D View");
             twoDbutton.setSelected(false);
             twoDbutton.addActionListener((new java.awt.event.ActionListener() {
@@ -313,7 +317,7 @@ public class WWJApplet extends JApplet
             }}));
             toolbar.add(twoDbutton);
             
-            //three D view Button
+            //3D View Button
             threeDbutton = new JRadioButton("3D View");
             threeDbutton.setSelected(true);
             threeDbutton.addActionListener((new java.awt.event.ActionListener() {
@@ -322,6 +326,7 @@ public class WWJApplet extends JApplet
                 threeDButtonActionPerformed(evt);
             }}));
             toolbar.add(threeDbutton);
+            
             //Connect 2D and 3D view buttons
             ButtonGroup bgView = new ButtonGroup();
             bgView.add(twoDbutton);
@@ -367,7 +372,7 @@ public class WWJApplet extends JApplet
                 }}));
             toolbar.add(eUpdate);
             
-            inputSatellites(); //function that reads user input file and adds satellites
+            inputSatellites(); //Function that reads user input file and adds satellites
             
             //WORLD WIND APPLET CODE (UNMODIFIED)
             // Call javascript appletInit()
@@ -566,18 +571,18 @@ public class WWJApplet extends JApplet
         ga.getAttributes().setFrameShape(AVKey.SHAPE_NONE);
         ga.getAttributes().setEffect(AVKey.TEXT_EFFECT_OUTLINE);
         ga.getAttributes().setTextAlign(AVKey.CENTER);
-        this.labelsLayer.addRenderable(ga);
+//        this.labelsLayer.addRenderable(ga);
     }
     //END OF WORLDWIND APPLET CODE (UNMODIFIED)
     //JSatTrak added code
     
     /*
      * Input name of satellite, adds that satellite to the satHash
-     * Called in inputSatellites function
+     * It is called in inputSatellites function
      */
     public void addCustomSat(String name)
     {
-        // if nothing given:
+        // If nothing given:
         if(name == null || name.equalsIgnoreCase(""))
         {
             System.out.println("returned");
@@ -588,33 +593,31 @@ public class WWJApplet extends JApplet
         
         satHash.put(name, prop);
 
-        // set satellite time to current date
+        // Set satellite time to current date
         prop.propogate2JulDate(this.getCurrentJulTime());
     }
     
-    /*
-     * Returns scenarioEpochDate
-     * Called in addCustomSat
-     */
+    
+     // Returns scenarioEpochDate
+     // It is called in addCustomSat
+     
     public Time getScenarioEpochDate()
     {
         return scenarioEpochDate;
     }
     
-    /*
-     * returns Julian date (double)
-     * Used in addCustomSat and animateApplet
-     */
-    public double getCurrentJulTime()
+    
+     // Returns Julian date (double)
+     // Used in addCustomSat and animateApplet
+     public double getCurrentJulTime()
     {
         return currentJulianDate.getJulianDate();
     }
     
-    /*
-     * Given an input of milliseconds, adds that time to scenario
-     * used in setTime() and inputSatellites
-     */
-    public void setTime(long millisecs)
+   
+    //  Given an input of milliseconds, adds that time to scenario
+    //  used in setTime() and inputSatellites
+     public void setTime(long millisecs)
     {
     currentJulianDate.set(millisecs);
         
@@ -625,45 +628,44 @@ public class WWJApplet extends JApplet
         updateTime();
     }
     
-    /**
-     * Set the current time of the app.
-     * @param julianDate Julian Date
-     */
+    
+     // Set the current time of the app.
+     // @param julianDate Julian Date
     public void setTime(double julianDate)
     {
         GregorianCalendar gc = Time.convertJD2Calendar(julianDate);
         setTime(gc.getTimeInMillis());        
     }
 
-    /*
-     * Updates time in scenario and repaints World Wind.  
-     * Updates sun postion, ground track, date display, satellites, and ECI/ECEF layers
-     */
+   
+    // Updates time in scenario and repaints World Wind.  
+    // Updates sun postion, ground track, date display, satellites, and ECI/ECEF layers     
     public void updateTime()
     {
-        // save old time
+        // Save Old Time
         double prevJulDate = currentJulianDate.getJulianDate();            
 
         //Adds seconds (play direction should be 1 or 0)
+        //This is where the actual Stepping occurs
         currentJulianDate.addSeconds( currentPlayDirection*animationSimStepSeconds );
-        // update sun position
+        // Update sun position
         sun.setCurrentMJD(currentJulianDate.getMJD());
                 
-        // if time jumps by more than 91 minutes check period of sat to see if
-        // ground tracks need to be updated
+        // If time jumps by more than 91 minutes check period of sat to see if
+        // ground tracks need to be updated.  Ground Tracks currently not shown in Applet
         double timeDiffDays = Math.abs(currentJulianDate.getJulianDate()-prevJulDate); // in days
         checkTimeDiffResetGroundTracks(timeDiffDays);        
                 
-        // update date box:
+        // Update Date Box:
         dateDisplay.setText( currentJulianDate.getDateTimeStr() );//String.format("%tc",cal) );
         
-        // now propogate all satellites to the current time  
+        // Now propogate all satellites to the current time  
         for (AbstractSatellite sat : satHash.values() )
         {
             sat.propogate2JulDate( currentJulianDate.getJulianDate() );
         } // propgate each sat 
         
-        // update any other time dependant objects
+        // Update any other time dependant objects
         for(JSatTrakTimeDependent tdo : timeDependentObjects)
         {
             if(tdo != null)
@@ -680,14 +682,14 @@ public class WWJApplet extends JApplet
         forceRepainting(); // repaint 2d/3d earth
     } // update time
     
-    /*
-     * Checks to see if the ground track needs to be reset
-     */
-    public void checkTimeDiffResetGroundTracks(double timeDiffDays)
+ 
+    // Checks to see if the ground track needs to be reset
+    // Not used in Applet
+     public void checkTimeDiffResetGroundTracks(double timeDiffDays)
     {
         if( timeDiffDays > 91.0/1440.0)
         {
-            // big time jump
+            // Big time jump
             for (AbstractSatellite sat : satHash.values() )
             {
                 if(sat.getShowGroundTrack() && (sat.getPeriod() <= (timeDiffDays*24.0*60.0) ) )
@@ -729,11 +731,11 @@ public class WWJApplet extends JApplet
             {
                 wwd.redraw();
             }
-        } // if sun Shading
+        } // If sun Shading
         
-    } // update - for sun shading
+    } // Update - for sun shading
     
-    //Turns on sun shading- really only for lens-flare layer
+    //Turns on sun shading- really only for lens - flare layer
     public void setSunShadingOn(boolean useSunShading)
     {
         if(useSunShading == sunShadingOn)
@@ -750,7 +752,7 @@ public class WWJApplet extends JApplet
 public void playButtonActionPerformed(ActionEvent e)
 {
     //If scenario isn't already playing and has satellites
-    if(play && inputSat)
+    if(canBePlayed && inputSat)
     {
         //Update every 50 miliseconds
         animationRefreshRateMs = 50;
@@ -759,7 +761,7 @@ public void playButtonActionPerformed(ActionEvent e)
         //Animate
         animateApplet(true);
         //Already playing!
-        play = false;
+        canBePlayed = false;
         //Update display
         stepDisplay.setText("" + animationSimStepSeconds);
         //Hasn't been reset
@@ -773,8 +775,8 @@ public void playButtonActionPerformed(ActionEvent e)
 //Pause scenario
 public void pauseButtonActionPerformed(ActionEvent e)
 {
-    //If play: means scenario can be played (Isn't already playing)
-    if(play)
+    //If play: means scenario can be played (Aka isn't already playing)
+    if(canBePlayed)
     {}
     //Scenario is playing
     else
@@ -786,7 +788,7 @@ public void pauseButtonActionPerformed(ActionEvent e)
         //Update display
         statusDisplay.setText("Scenario Paused");
         //Isn't already playing
-        play = true; 
+        canBePlayed = true; 
         //Non real time
         nonRealTime = true;
     }
@@ -803,7 +805,7 @@ public void resetButtonActionPerformed(ActionEvent e)
     //Stop playing
     animateApplet(false);
     //Scenario isn't playing (can be played)
-    play = true;
+    canBePlayed = true;
     //Update display
     statusDisplay.setText("Scenario Reset");
     //Not in real time mode
@@ -814,7 +816,7 @@ public void resetButtonActionPerformed(ActionEvent e)
     //If there are satellites, set time to user requested time
     if(inputSat)
     {setTime(time);}
-    else //set time to current time for no satellites
+    else //Set time to current time for no satellites
     {currentJulianDate.update2CurrentTime();} 
     //Has been reset
     reset = true;
@@ -887,7 +889,7 @@ public void ecefButtonActionPerformed(ActionEvent e)
 public void twoDButtonActionPerformed(ActionEvent e)
 {
     if(twoDon)
-    {/* Already got a 2D window! */}
+    {/* Already have a 2D window! */}
     else
     {
     try
@@ -972,10 +974,10 @@ private void realTimeActionPerformed(ActionEvent evt)
         stepDisplay.setText("" + animationSimStepSeconds); //Change step size display
         statusDisplay.setText("Real Time Mode"); //Change status
         reset = false; //No longer reset
-        if(play)
+        if(canBePlayed)
         {//Play scenario
         animateApplet(true);
-        play = false;
+        canBePlayed = false;
         }
     }
     else
@@ -987,8 +989,8 @@ private void realTimeActionPerformed(ActionEvent evt)
         stepDisplay.setText("" + animationSimStepSeconds);
         statusDisplay.setText("Non-real Time Mode");
         animateApplet(false); // Stop playing
-        play = true; //ready to play (not playing)
-        reset = false; //not reset
+        canBePlayed = true; //Ready to play (not playing)
+        reset = false; //Not reset
     }
 }
 private void orbitTraceActionPerformed(ActionEvent evt)
@@ -1006,8 +1008,8 @@ private void orbitTraceActionPerformed(ActionEvent evt)
         satHash.get(input.getSatelliteName(i)).setShowGroundTrack(false);
         }
     }
-    forceRepainting(); //repaint
-    orbitShown = false; //no orbits shown
+    forceRepainting(); //Repaint
+    orbitShown = false; //No orbits shown
     }
     else
     {//No orbits showing
@@ -1050,11 +1052,11 @@ private void eUpdateActionPerformed(ActionEvent e)
                         eTimer.stop(); //Stop timer
                         if(!displayed) //If it hasn't already been displayed
                         {statusDisplay.setText("Ephemeris Update Stopped");
-                        displayed = true; //has been displayed
+                        displayed = true; //Has been displayed
                         }
                     }
                     try{
-                    if(orbitTrace.isSelected()) //if orbit traces were displayed, need to redraw
+                    if(orbitTrace.isSelected()) //If orbit traces were displayed, need to redraw
                     {
                         for(int i = 0; i<input.getSize(); i++)
                         {
@@ -1125,9 +1127,21 @@ private void animateApplet(boolean b) {
                     if(getCurrentJulTime() > (maxTime-stepJulian))
                         {
                             playTimer.stop(); //Stop playing!
-                            play = true;
+                            canBePlayed = true;
                             statusDisplay.setText("End of Scenario");
                         }
+                     if(!nonRealTime)
+                     {long time = System.currentTimeMillis();
+                     GregorianCalendar g = currentJulianDate.getCurrentGregorianCalendar();
+                     long currentTime = g.getTimeInMillis();
+                     long difference = time-currentTime;
+                     if (difference >=10000)
+                     {
+                         currentJulianDate.update2CurrentTime();
+                         setTime(currentJulianDate.getJulianDate());
+                                          }
+                               }
+                     
                     // take one time step in the animation
                     currentPlayDirection = 1;
                     updateTime(); // animate
@@ -1137,12 +1151,12 @@ private void animateApplet(boolean b) {
     }
         else
         { //Should not play!
-            if(play)
+            if(canBePlayed)
             {}
             else
             {if(playTimer != null) //If there is a timer created, stop it
             {playTimer.stop();}
-            play = true;
+            canBePlayed = true;
             }
         }
     }
@@ -1334,12 +1348,12 @@ public void WWsetMJD(double mjd)
         // take care of which view mode to use
         if(viewModeECI)
         {
-            // update stars
+            // Update Stars
             starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
         }
         else
         {
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(0.0)); // reset to normal
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(0.0)); // Reset to Normal
         }
         
     }
@@ -1505,9 +1519,9 @@ public void WWsetMJD(double mjd)
                         maxTempTime = tempTime; //Set as max ephemeris time
                     }
                     S.setEphemeris(vector); //set ephemeris for each satellite
-                    // set default 3d model and turn on the use of 3d models: CURRENTLY UNAVAILABLE
-//                    S.setThreeDModelPath("globalstar/Globalstar.3ds");
-//                    S.setUse3dModel(true);
+                   // Set default 3d model and turn on the use of 3d models: CURRENTLY UNAVAILABLE
+                   // S.setThreeDModelPath("globalstar/Globalstar.3ds");
+                   // S.setUse3dModel(true);
                     if (input.getModelCentered(i)) //BAD
                     {
                            //statusDisplay.setText("Can't do that yet!");
@@ -1520,11 +1534,11 @@ public void WWsetMJD(double mjd)
             double scenarioTime = input.getTime(); //Get user input time
             if(scenarioTime>=time && scenarioTime < maxTempTime|| overrideTime) //If user input time is greater than time in ephemeris
             {
-            time = scenarioTime; //set time to user input time
+            time = scenarioTime; //Set time to user input time
                 if(!overrideTime || ignoreOverride) //If time needs to be updated
                 {
                 setTime(time);
-                play = true;
+                canBePlayed = true;
                 }
             //step one second forward than go back to original time...fixes dissapearance? 
             double temp = currentJulianDate.getJulianDate();
@@ -1545,9 +1559,9 @@ public void WWsetMJD(double mjd)
                 currentJulianDate.update2CurrentTime(); //Set to current time
                 setTime(currentJulianDate.getJulianDate());
                 }
-                play = false;
+                canBePlayed = false;
                 ignoreOverride = true;
-                try //remove satellites that were added: don't display satellites if time is bad!
+                try //Remove satellites that were added: don't display satellites if time is bad!
                 {satHash.clear();}
                 catch(Exception e)
                 {}
@@ -1561,7 +1575,7 @@ public void WWsetMJD(double mjd)
                 setTime(time);
                 }
                 inputSat = false; //No satellites
-                play = false;
+                canBePlayed = false;
                 ignoreOverride = true;
             }
             }
@@ -1573,7 +1587,7 @@ public void WWsetMJD(double mjd)
             currentJulianDate.update2CurrentTime(); //Set to current time
             setTime(currentJulianDate.getJulianDate());
             }
-            play = false;
+            canBePlayed = false;
             ignoreOverride = true;}
     }
 } //End of program
