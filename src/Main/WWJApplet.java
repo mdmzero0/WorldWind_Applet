@@ -101,7 +101,7 @@ public class WWJApplet extends JApplet
     private Time currentJulianDate = new Time(); // current sim or real time (Julian Date)
     private Time scenarioEpochDate = new Time(); //Time displayed in scenario
     double time = 100000000000000.0; //Far too big- used to determine earliest ephemeris time
-    private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss.SSS z"); //date format for scenario time strings
+    private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss z"); //date format for scenario time strings
     double oldTime; //time used when no longer in real-time mode (takes scenario back to last non-real time)
     private boolean overrideTime = false; //prevents scenario from reverting to the user-input time when using automatically updating inputs
     
@@ -109,7 +109,7 @@ public class WWJApplet extends JApplet
     private int currentPlayDirection = 0; //-1 backward, 0 stop, 1 forwards
     private double animationSimStepSeconds = 60.0; //step size (default is one minute)
     private int animationRefreshRateMs = 50; //Refresh rate for step size (time in between steps)
-    private boolean play = true; //Boolean to control whether scenario is playing or not (default true): true means scenario is ready to play, false means not ready (playing already)
+    private boolean canBePlayed = true; //Boolean to control whether scenario is playing or not (default true): true means scenario is ready to canBePlayed, false means not ready (playing already)
     private boolean inputSat = true; //Boolean for whether satellites have been input or not
     private boolean end = false; //Boolean for end of ephemeris time (prevents scenario from running past the end of ephemeris)
     double[] steps = new double[] {1, 10, 30, 60, 120, 300, 1800, 3600, 7200, 86400}; //step sizes
@@ -218,7 +218,7 @@ public class WWJApplet extends JApplet
             toolbar = new JToolBar();
             Content.add(toolbar, BorderLayout.PAGE_START);
             
-            //Add the play button
+            //Add the canBePlayed button
             playScenario = new JButton("Play");
             playScenario.addActionListener((new java.awt.event.ActionListener() {
                 @Override
@@ -644,7 +644,7 @@ public class WWJApplet extends JApplet
         // save old time
         double prevJulDate = currentJulianDate.getJulianDate();            
 
-        //Adds seconds (play direction should be 1 or 0)
+        //Adds seconds (canBePlayed direction should be 1 or 0)
         currentJulianDate.addSeconds( currentPlayDirection*animationSimStepSeconds );
         // update sun position
         sun.setCurrentMJD(currentJulianDate.getMJD());
@@ -652,7 +652,8 @@ public class WWJApplet extends JApplet
         // if time jumps by more than 91 minutes check period of sat to see if
         // ground tracks need to be updated
         double timeDiffDays = Math.abs(currentJulianDate.getJulianDate()-prevJulDate); // in days
-        checkTimeDiffResetGroundTracks(timeDiffDays);        
+        checkTimeDiffResetGroundTracks(timeDiffDays);
+
                 
         // update date box:
         dateDisplay.setText( currentJulianDate.getDateTimeStr() );//String.format("%tc",cal) );
@@ -750,7 +751,7 @@ public class WWJApplet extends JApplet
 public void playButtonActionPerformed(ActionEvent e)
 {
     //If scenario isn't already playing and has satellites
-    if(play && inputSat)
+    if(canBePlayed && inputSat)
     {
         //Update every 50 miliseconds
         animationRefreshRateMs = 50;
@@ -759,7 +760,7 @@ public void playButtonActionPerformed(ActionEvent e)
         //Animate
         animateApplet(true);
         //Already playing!
-        play = false;
+        canBePlayed = false;
         //Update display
         stepDisplay.setText("" + animationSimStepSeconds);
         //Hasn't been reset
@@ -773,8 +774,8 @@ public void playButtonActionPerformed(ActionEvent e)
 //Pause scenario
 public void pauseButtonActionPerformed(ActionEvent e)
 {
-    //If play: means scenario can be played (Isn't already playing)
-    if(play)
+    //If canBePlayed: means scenario can be played (Isn't already playing)
+    if(canBePlayed)
     {}
     //Scenario is playing
     else
@@ -786,7 +787,7 @@ public void pauseButtonActionPerformed(ActionEvent e)
         //Update display
         statusDisplay.setText("Scenario Paused");
         //Isn't already playing
-        play = true; 
+        canBePlayed = true; 
         //Non real time
         nonRealTime = true;
     }
@@ -803,7 +804,7 @@ public void resetButtonActionPerformed(ActionEvent e)
     //Stop playing
     animateApplet(false);
     //Scenario isn't playing (can be played)
-    play = true;
+    canBePlayed = true;
     //Update display
     statusDisplay.setText("Scenario Reset");
     //Not in real time mode
@@ -972,10 +973,10 @@ private void realTimeActionPerformed(ActionEvent evt)
         stepDisplay.setText("" + animationSimStepSeconds); //Change step size display
         statusDisplay.setText("Real Time Mode"); //Change status
         reset = false; //No longer reset
-        if(play)
+        if(canBePlayed)
         {//Play scenario
         animateApplet(true);
-        play = false;
+        canBePlayed = false;
         }
     }
     else
@@ -987,7 +988,7 @@ private void realTimeActionPerformed(ActionEvent evt)
         stepDisplay.setText("" + animationSimStepSeconds);
         statusDisplay.setText("Non-real Time Mode");
         animateApplet(false); // Stop playing
-        play = true; //ready to play (not playing)
+        canBePlayed = true; //ready to played (not playing)
         reset = false; //not reset
     }
 }
@@ -1030,7 +1031,7 @@ private void eUpdateActionPerformed(ActionEvent e)
     {update = false;}
     else //If automatic update is off, set on when clicked
     {update = true;}
-    eTimer = new Timer(6000, new ActionListener() //create update timer
+    eTimer = new Timer(6000, new ActionListener() //create update timer //FIRST NUMBER IS UPDATE INTERVAL IN MILISECONDS!
             {
             @Override
                 public void actionPerformed(ActionEvent event)
@@ -1096,7 +1097,7 @@ private void animateApplet(boolean b) {
         if (b && inputSat) //If animate and there are satellites
         {
         statusDisplay.setText("Scenario Running");
-        //Hard Coded play scenario
+        //Hard Coded canBePlayed scenario
         double date = this.getCurrentJulTime();
         double currentMJDtime = date - AstroConst.JDminusMJD;
         double deltaTT2UTC = Time.deltaT(currentMJDtime); // = TT - UTC
@@ -1125,9 +1126,24 @@ private void animateApplet(boolean b) {
                     if(getCurrentJulTime() > (maxTime-stepJulian))
                         {
                             playTimer.stop(); //Stop playing!
-                            play = true;
+                            canBePlayed = true;
                             statusDisplay.setText("End of Scenario");
                         }
+                    if(!nonRealTime)
+                    {
+                        long sysTime = System.currentTimeMillis();
+                        GregorianCalendar g = currentJulianDate.getCurrentGregorianCalendar();
+                        long currentTime = g.getTimeInMillis();
+                        long timeDif = sysTime-currentTime;
+                        if(timeDif >= 10000)
+                                {
+                                    currentJulianDate.update2CurrentTime();
+                                }
+                        else if(timeDif <= 10000)
+                        {
+                            currentJulianDate.update2CurrentTime();
+                        }
+                    }
                     // take one time step in the animation
                     currentPlayDirection = 1;
                     updateTime(); // animate
@@ -1136,13 +1152,13 @@ private void animateApplet(boolean b) {
         playTimer.start();
     }
         else
-        { //Should not play!
-            if(play)
+        { //Should not canBePlayed!
+            if(canBePlayed)
             {}
             else
             {if(playTimer != null) //If there is a timer created, stop it
             {playTimer.stop();}
-            play = true;
+            canBePlayed = true;
             }
         }
     }
@@ -1522,7 +1538,7 @@ public void WWsetMJD(double mjd)
                 if(!overrideTime || ignoreOverride) //If time needs to be updated
                 {
                 setTime(time);
-                play = true;
+                canBePlayed = true;
                 }
             //step one second forward than go back to original time...fixes dissapearance? 
             double temp = currentJulianDate.getJulianDate();
@@ -1543,7 +1559,7 @@ public void WWsetMJD(double mjd)
                 currentJulianDate.update2CurrentTime(); //Set to current time
                 setTime(currentJulianDate.getJulianDate());
                 }
-                play = false;
+                canBePlayed = false;
                 ignoreOverride = true;
                 try //remove satellites that were added: don't display satellites if time is bad!
                 {satHash.clear();}
@@ -1559,7 +1575,7 @@ public void WWsetMJD(double mjd)
                 setTime(time);
                 }
                 inputSat = false; //No satellites
-                play = false;
+                canBePlayed = false;
                 ignoreOverride = true;
             }
             }
@@ -1571,7 +1587,7 @@ public void WWsetMJD(double mjd)
             currentJulianDate.update2CurrentTime(); //Set to current time
             setTime(currentJulianDate.getJulianDate());
             }
-            play = false;
+            canBePlayed = false;
             ignoreOverride = true;}
     }
 } //End of program
