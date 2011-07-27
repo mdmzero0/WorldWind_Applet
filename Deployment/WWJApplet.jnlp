@@ -2,11 +2,11 @@
 <!-- $Id -->
    <jnlp href="WWJApplet.jnlp">
     <information>
-        <title>World Wind Java Applet Demo</title>
-        <vendor>NASA</vendor>
-        <homepage href="http://worldwind.arc.nasa.gov"/>
-        <description>World Wind Java Applet Demo</description>
-        <description kind="short">World Wind Java Applet Demo</description>
+        <title>CCS Visualization Test</title>
+        <vendor>a.i. Solutions</vendor>
+        <homepage href="http://ai-solutions.com"/>
+        <description>CCS Visualization Test Page</description>
+        <description kind="short">Visualization Test</description>
     </information>
     <security>
         <all-permissions/>
