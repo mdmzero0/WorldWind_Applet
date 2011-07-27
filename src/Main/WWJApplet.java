@@ -1,186 +1,169 @@
-package Main;
 /*
-Copyright (C) 2001, 2009 United States Government
+Copyright (C) 2001, 2011 United States Government
 as represented by the Administrator of the
 National Aeronautics and Space Administration.
 All Rights Reserved.
 */
+package Main;
 
-import Utilities.StateVector;
 import gov.nasa.worldwind.*;
 import gov.nasa.worldwind.avlist.AVKey;
 import gov.nasa.worldwind.awt.WorldWindowGLCanvas;
 import gov.nasa.worldwind.examples.ClickAndGoSelectListener;
 import gov.nasa.worldwind.geom.*;
 import gov.nasa.worldwind.layers.*;
+import gov.nasa.worldwind.render.GlobeAnnotation;
 import gov.nasa.worldwind.util.StatusBar;
 import gov.nasa.worldwind.view.orbit.*;
 import netscape.javascript.JSObject;
-//Start of JSatTrak imports
-import Bodies.*;
-import Utilities.Time;
-import java.util.Hashtable;
-import java.text.SimpleDateFormat;
-import java.util.TimeZone;
-import Satellite.*;
-import java.util.Vector;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-import Layers.*;
-import gov.nasa.worldwind.examples.sunlight.*;
-import gov.nasa.worldwind.render.*;
-import java.util.ArrayList;
-import gov.nasa.worldwind.event.*;
-import gov.nasa.worldwind.awt.AWTInputHandler;
-import View.*;
-import gov.nasa.worldwind.view.orbit.BasicOrbitView;
-import java.util.GregorianCalendar;
-import Utilities.OnlineInput;
-import TwoDImage.*;
 
 import javax.swing.*;
 import java.awt.*;
 
+import Layers.*;
+import Utilities.Time;
+import Satellite.AbstractSatellite;
+import java.util.Hashtable;
+import Satellite.StkEphemerisReader;
+import Utilities.OnlineInput;
+import Satellite.CustomSatellite;
+import java.util.Vector;
+import Utilities.StateVector;
+import java.util.GregorianCalendar;
+import Satellite.JSatTrakTimeDependent;
+import Bodies.*;
+import gov.nasa.worldwind.examples.sunlight.*;
+import java.text.SimpleDateFormat;
 import gov.nasa.worldwind.layers.placename.*;
 import gov.nasa.worldwind.layers.Earth.*;
+import gov.nasa.worldwind.layers.StarsLayer;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import Utilities.AstroConst;
 import javax.swing.Timer;
+import TwoDImage.J2DEarthPanel;
+import View.*;
+import gov.nasa.worldwind.awt.AWTInputHandler;
+import java.util.Random;
 
+import java.lang.Math;
 /**
- * Provides a base application framework for simple WorldWind applets.
- * <p/>
- * A simple applet which runs World Wind with a StatusBar at the bottom and lets javascript set some view attributes.
+ * Illustrates the how to display a World Wind <code>{@link WorldWindow}</code> in a Java Applet and interact with the
+ * WorldWindow through JavaScript code running in the browser. This class extends <code>{@link JApplet}</code> and
+ * embeds a WorldWindowGLCanvas and a StatusBar in the Applet's content pane.
  *
  * @author Patrick Murris
- * @version $Id: WWJApplet.java 15441 2011-05-14 08:50:57Z tgaskins $
+ * @version $Id: WWJApplet.java 15663 2011-06-17 21:15:40Z dcollins $
  */
 
+/**
+ * This is code for a satellite visualization tool using NASA World Wind and a open source
+ * satellite tracking program called JSatTrak (by Sean Gano).  The following code is a combination
+ * of modified code from both programs to create a web-embeddable applet that can visualize satellites
+ * in their orbits.  This program was developed by a.i. Solutions (www.ai-solutions.com).  
+ * 
+ * @author MMascaro
+ */
 public class WWJApplet extends JApplet
 {
-    protected WorldWindowGLCanvas wwd;
-    protected RenderableLayer labelsLayer;
+    protected WorldWindowGLCanvas wwd; //From original applet code- this is World Wind
+    protected RenderableLayer labelsLayer; //Right now unimportant- does nothing
+    private ViewControlsLayer viewControlsLayer; //Layer for the little buttons in the bottom right (controls view)
+    private Model m; //This is the globe itself
     
-    /* Variables being added for the JSatTrak addition to the WorldWind Applet. 
-     * Starting with: Sun and Moon bodies (update: Moon may not be used?)
-     * Also adding: Time
-     * Also adding: Hashtable for satellites
-     */
-    // Sun object
-    private Sun sun;
-    private Moon moon;
+    private Sun sun; //Self explanatory
+    private SunPositionProvider spp; //Changes the position of the sun based on time
+    private boolean sunShadingOn = false; // Controls if sun shading is used and... 
+    //Set false because Sun Shading does not work on Windows 7, issues with RectangularNormalTessalator so it is no longer being used
+    private StarsLayer starsLayer; //Need this to change size of star layer  (Problem with Reduced View so it is now 10x larger)
+    private LensFlareLayer lensFlareLayer; //Creates the lens flare (Needed to make sun visible)
     
-    //Time!
-    Time currentJulianDate = new Time(); // current sim or real time (Julian Date)
-    double time = 100000000000000.0; //Far too big- used to determine earliest ephermis time
+    //Making ECI/ECEF Layer
+    private ECIRenderableLayer eciLayer; //Earth Centered Inertial layer- satellites are added to this
+    private OrbitModelRenderable orbitModel; //Model for satellites and their orbits
+    private ECIRadialGrid eciRadialGrid = new ECIRadialGrid(); //Radial grid for ECI layer, good for testing to see if layer renders properly
+    private ECEFRenderableLayer ecefLayer; //Earth Centered Earth Fixed layer
+    private ECEFModelRenderable ecefModel; //Model for satellites and their orbits
+    private boolean viewModeECI = true; //Boolean controls if ECI or ECEF view (used in WWsetMJD)
+    private EcefTimeDepRenderableLayer timeDepLayer; //Layer of time dependent objects in ECEF? Unsure whether this is useful.
     
-    // date formats for displaying and reading in
-    private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss.SSS z");
-    private SimpleDateFormat dateformatShort1 = new SimpleDateFormat("dd MMM y H:m:s.S z");
-    private SimpleDateFormat dateformatShort2 = new SimpleDateFormat("dd MMM y H:m:s z"); // no Milliseconds
+    //Satellites
+    private Hashtable<String,AbstractSatellite> satHash = new Hashtable<String,AbstractSatellite>(); //This table stores each satellite added to the program (Satellites MUST be added)
+    private StkEphemerisReader reader = new StkEphemerisReader(); //Reader for STK ephemeris files (only STK format)
+    private OnlineInput input; //Custom-made class to aquire user inputs (Currently html file as a test)
+    Vector<JSatTrakTimeDependent> timeDependentObjects = new Vector<JSatTrakTimeDependent>(); //Time dependent objects
+    private boolean orbitShown = true; //Boolean to control whether orbit traces are shown
+    private boolean update = false; //Boolean to control whether user input should automatically update or load only once (default is once)
+    Vector<StateVector> vector; //Vector to read in satellite information from the ephemeris reader (located in inputSatellites)
+    boolean timerOn = false; //Boolean to control whether real-time mode is on or off
+    Timer eTimer; //Timer for automatic updating of user inputs
+    private boolean ignoreOverride = false; //Ignore override of time if original user input time was incorrect: change time when corrected
     
-    // scenario epoch time settings
-    private boolean epochTimeEqualsCurrentTime = false; // uses current time for scenario epoch (reset button)
-    private Time scenarioEpochDate = new Time(); // scenario epoch if epochTimeisCurrentTime = false
+    private Time currentJulianDate = new Time(); // Current sim or real time (Julian Date)
+    private Time scenarioEpochDate = new Time(); //Time displayed in scenario
+    double time = 100000000000000.0; //Far too big- used to determine earliest ephemeris time
+    private SimpleDateFormat dateformat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss z"); //Date format for scenario time strings...Can add Milli Seconds 
+    //With Format ("dd MMM yyyy HH:mm:ss.SSS z")
+    double oldTime; //Time used when no longer in real-time mode (takes scenario back to last non-real time)
+    private boolean overrideTime = false; //Prevents scenario from reverting to the user-input time when using automatically updating inputs
     
-    // store local time zone for printing
-    TimeZone localTZ = TimeZone.getDefault();
-    
-    //Scenario Update variables
-    int currentPlayDirection = 0; // 1= forward, -1=backward, =0-no animation step, but can update time (esentially a graphic ini or refresh)
-    private double animationSimStepSeconds = 60.0; // dt in Days per animation step/time update
-    
-    //Animation variables
-    private boolean stopHit = false;
-    private long lastFPSms;
-    private double fpsAnimation;
-    private Timer playTimer;
-    private int realTimeAnimationRefreshRateMs = 1000; // refresh rate for real time animation
-    private int nonRealTimeAnimationRefreshRateMs = 50; // refresh rate for non-real time animation
-    private int animationRefreshRateMs = nonRealTimeAnimationRefreshRateMs; // (current)Milliseconds
-     
-    //Satellites!
-    // hashtable to store all the statelites currently being processed
-    private Hashtable<String,AbstractSatellite> satHash = new Hashtable<String,AbstractSatellite>();
-
-    // time dependent objects that should be update when time is updated -- NEED TO BE SAVED?
-    Vector<JSatTrakTimeDependent> timeDependentObjects = new Vector<JSatTrakTimeDependent>();
-    
-    //Stuff from J3DEarthPanel
-    ECIRenderableLayer eciLayer; // ECI layer for plotting in ECI coordinates
-    ECEFRenderableLayer ecefLayer; // ECEF layer for plotting in ECEF coordinates
-    EcefTimeDepRenderableLayer timeDepLayer;
-    OrbitModelRenderable orbitModel; // renderable object for plotting
-    ECEFModelRenderable ecefModel;
-    
-    private boolean viewModeECI = true; // view mode - ECI (true) or ECEF (false)
-    StarsLayer starsLayer = new StarsLayer();
-    
-    // view mode options
-    private boolean modelViewMode = false; // default false
-    private String modelViewString = ""; // to hold name of satellite to view when modelViewMode=true
-    private double modelViewNearClip = 10000; // clipping pland for when in Model View mode
-    private double modelViewFarClip = 5.0E7;
-    private boolean smoothViewChanges = true; // for 3D view smoothing (only is set after model/earth view has been changed -needs to be fixed)
-    // near/far clipping plane distances for 3d windows (can effect render speed and if full orbit is shown)
-     private double farClippingPlaneDistOrbit = -1;//200000000d; // good out to geo, but slow for LEO, using AutoClipping plane view I made works better
-     private double nearClippingPlaneDistOrbit = -1; // -1 value Means auto adjusting
-
-    ViewControlsLayer viewControlsLayer;
-
-    // sun shader
-    private RectangularNormalTessellator tessellator;
-    private LensFlareLayer lensFlareLayer;
-    private AtmosphereLayer atmosphereLayer;
-    private SunPositionProvider spp;
-    private boolean sunShadingOn = false; // controls if sun shading is used
-
-    // ECI grid
-    private ECIRadialGrid eciRadialGrid = new ECIRadialGrid();
-
-    //Reading ephemeris data
-    StkEphemerisReader Reader = new StkEphemerisReader();
-    
-    //Satellite input
-    OnlineInput input;
-    private boolean play = true;
-    private boolean inputSat = true;
-    private boolean end = false;
+    //Animation
+    private int currentPlayDirection = 0; //-1 backward, 0 stop, 1 forwards
+    private double animationSimStepSeconds = 60.0; //Step Size (default is one minute)
+    private int animationRefreshRateMs = 50; //Refresh rate for step size (time in between steps in milliseconds)
+    private boolean canBePlayed = true; //Boolean to control whether scenario is playing or not (default true): true means scenario is ready to play, false means not ready (playing already)
+    private boolean inputSat = true; //Boolean for whether satellites have been input or not
+    private boolean end = false; //Boolean for end of ephemeris time (prevents scenario from running past the end of ephemeris)
+    double[] steps = new double[] {1, 10, 30, 60, 120, 300, 1800, 3600, 7200, 86400}; //Step sizes
+    int stepNumber = 3; //Index for the current step size in the array (starts at index of zero, so 3 corresponds to a step size of 60)
+    private Timer playTimer; //Timer for animation of scenario
+    private boolean twoDon = false; //Boolean to control 2D and 3D modes
+    private boolean nonRealTime = true; //Boolean for whether scenario is in real time or non real time mode
+    double tempStep = 60; //Temporary variable for step size- used in custom step size code
+    private boolean reset = true; //Boolean to control whether scenario has been reset or not (default is true)
+    private boolean updating = false; //Boolean to prevent scenario from trying to change satellite properties while user input is being updated
+    private boolean displayed = false; //Boolean to prevent text from being constantly displayed in status display during a loop
     
     //Buttons
-    JButton playScenario;
-    JButton pauseScenario;
-    JButton resetScenario;
-    JButton stepSizeUp;
-    JButton stepSizeDown;
-    JRadioButton ECIon;
-    JRadioButton ECEFon;
-    JToolBar toolbar; 
-    JTextField dateDisplay;
-    JTextField stepDisplay;
-    StatusBar statusBar;
-    JTextField statusDisplay;
-    JLabel stepSizeLabel;
-    JRadioButton twoDbutton;
-    JRadioButton threeDbutton;
+    JButton playScenario; //Play scenario button
+    JButton pauseScenario; //Pause scenario button
+    JButton resetScenario; //Reset scenario button
+    JButton stepSizeUp; //Increase step size
+    JButton stepSizeDown; //Decrease step size
+    JRadioButton ECIon; //ECI mode
+    JRadioButton ECEFon; //ECEF mode
+    JToolBar toolbar; //Toolbar contains each button and display 
+    JTextField dateDisplay; //Display for scenario time
+    JTextField stepDisplay; //Display for step size value/input
+    JTextField statusDisplay; //Display for scenario status/errors
+    JLabel stepSizeLabel; //Label for step size
+    JRadioButton twoDbutton; //2D mode
+    JRadioButton threeDbutton; //3D mode
+    JCheckBox realTime; //Real time mode
+    JCheckBox orbitTrace; //Display orbit trace
+    JCheckBox eUpdate; //Automatic update mode
     
-    //Step sizes
-    double[] steps = new double[] {1, 10, 30, 60, 120, 300, 1800, 3600, 7200, 86400};
-    int stepNumber = 3;
+    Container Content = this.getContentPane(); //Container for applet - toolbar, world wind, and status bar added to this
+    J2DEarthPanel twoDpanel; //2D panel
     
-    BasicOrbitViewLimits limits;
-    
-    J2DEarthPanel twoDpanel;
-    Container Content = this.getContentPane();
-    private boolean twoDon = false;
+    // View Mode Options
+    // Currently View Mode is not being used in the Applet
+    private boolean modelViewMode = false; // Model View Mode (not supported currently)
+    private String modelViewString = ""; // To hold name of satellite to view when modelViewMode=true
+    private double modelViewNearClip = 10000; // Clipping plane for when in Model View mode
+    private double modelViewFarClip = 5.0E7; // Max clipping plan for model view
+    private boolean smoothViewChanges = true; // For 3D view smoothing (only is set after model/earth view has been changed -needs to be fixed)
+    // near/far clipping plane distances for 3d windows (can effect render speed and if full orbit is shown)
+    private double farClippingPlaneDistOrbit = -1;//200000000d; // Good out to geo, but slow for LEO, using AutoClipping plane view I made works better
+    private double nearClippingPlaneDistOrbit = -1; // -1 Value Means auto adjusting // value adjusted in World Wind source code
     
     public WWJApplet()
-    {       
+    {
     }
 
     @Override
     public void init()
     {
-        Vector<StateVector> vector;
         try
         {
             // Check for initial configuration values
@@ -200,200 +183,46 @@ public class WWJApplet extends JApplet
             if (value != null)
                 Configuration.setValue(AVKey.INITIAL_PITCH, Double.parseDouble(value));
 
-              Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
-
-             // Use normal/shading tessellator
-            // sun shading needs this
-            Configuration.setValue(AVKey.TESSELLATOR_CLASS_NAME, RectangularNormalTessellator.class.getName());
-
             // Create World Window GL Canvas
             this.wwd = new WorldWindowGLCanvas();
-            Content.add(this.wwd, BorderLayout.CENTER);
+            this.getContentPane().add(this.wwd, BorderLayout.CENTER);
+
             // Create the default model as described in the current worldwind properties.
-            Model m = (Model) WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME);
+            m = (Model) WorldWind.createConfigurationComponent(AVKey.MODEL_CLASS_NAME);
             this.wwd.setModel(m);
             
-            //Remove original Stars Layer
-            m.getLayers().remove(0);
-            
-//            // Add a renderable layer for application labels
-//            this.labelsLayer = new RenderableLayer();
-//            this.labelsLayer.setName("Labels");
-//            insertBeforeLayerName(this.wwd, this.labelsLayer, "Compass");
-            
-            // add EcefTimeDepRenderableLayer layer
-            timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD(),sun);
-            m.getLayers().add(timeDepLayer);
-            //insertBeforeLayerName(this.wwd,timeDepLayer,"Labels");*/
-            
-            // add ECI Layer -- FOR SOME REASON IF BEFORE EFEF and turned off ECEF Orbits don't show up!! Coverage effecting this too, strange
-            eciLayer = new ECIRenderableLayer(currentJulianDate.getMJD()); // create ECI layer
-            orbitModel = new OrbitModelRenderable(satHash, wwd.getModel().getGlobe());
-            eciLayer.addRenderable(orbitModel); // add renderable object
-            eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
-            eciRadialGrid.setShowGrid(false);
-            eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
-            m.getLayers().add(0,eciLayer); // add ECI Layer
-            //insertBeforeLayerName(this.wwd,eciLayer, "Labels");
-            
-            CountryBoundariesLayer country = new CountryBoundariesLayer();
-            country.setEnabled(false);
-            m.getLayers().add(country); 
-            Layer uhh = m.getLayers().getLayerByName("Political Boundaries");
-            m.getLayers().remove(uhh);     
-            
-            // add ECEF Layer
-            ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
-            ecefModel = new ECEFModelRenderable(satHash, wwd.getModel().getGlobe());
-            ecefLayer.addRenderable(ecefModel); // add renderable object
-            ecefLayer.setEnabled(false);
-            m.getLayers().add(ecefLayer); // add ECEF Layer
-            //insertBeforeLayerName(this.wwd,ecefLayer,"Labels");
-            
-            RenderableLayer latLongLinesLayer = createLatLongLinesLayer();
-            latLongLinesLayer.setName("Lat/Long Lines");
-            latLongLinesLayer.setEnabled(false);
-            m.getLayers().add(latLongLinesLayer); // add ECI Layer   
-            //insertBeforeLayerName(this.wwd,latLongLinesLayer,"Labels");
-
-            viewControlsLayer = new ViewControlsLayer();
-            viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
-            viewControlsLayer.setScale(6/10d);
-            viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
-            viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
-            viewControlsLayer.setEnabled(true); // turn off by default
-            viewControlsLayer.setShowVeControls(false);
-            m.getLayers().add(1,viewControlsLayer);
-            //insertBeforeCompass(wwd, viewControlsLayer);
-            //getLayerPanel().update(wwd);
-            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
-
-            // first call to update time to current time:
-            currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
-
-            // just a little touch up -- remove the milliseconds from the time
-            int mil = currentJulianDate.get(Time.MILLISECOND);
-            currentJulianDate.add(Time.MILLISECOND,1000-mil); // remove the milliseconds (so it shows an even second)
-
-            // set time string format
-            currentJulianDate.setDateFormat(dateformat);
-            scenarioEpochDate.setDateFormat(dateformat);
-            
-            // create Sun object
+            //Add sun and sun position provider
             sun = new Sun(currentJulianDate.getMJD());
-//            // create Moon object
-//            moon = new Moon();
-//            Moon.MoonPosition(currentJulianDate.getMJD());        
-            
-            //FIX FOR TRANSPARENT EARTH PROBLEM: Remove old star layer and add new star layer.
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
-            //insertBeforeLayerName(this.wwd,starsLayer,"View Controls");
-            m.getLayers().add(0,starsLayer);
-            
-            // set the sun provider to the shader
             spp = new CustomSunPositionProvider(sun);
-
-            //ALREADY HAVE AN ATMOSPHERE LAYER (Its just not working)
-            // Replace sky gradient with this atmosphere layer when using sun shading
-            this.atmosphereLayer = new AtmosphereLayer();
-            //m.getLayers().add(4,this.atmosphereLayer);
-            //insertBeforeLayerName(this.wwd,this.atmosphereLayer,"Labels");
-            
             // Add lens flare layer
             this.lensFlareLayer = LensFlareLayer.getPresetInstance(LensFlareLayer.PRESET_BOLD);
             m.getLayers().add(this.lensFlareLayer);
-            //insertBeforeLayerName(this.wwd,this.lensFlareLayer,"Labels");
+            setSunShadingOn(true);       
             
-            // Get tessellator
-            this.tessellator = (RectangularNormalTessellator)m.getGlobe().getTessellator();
-            // set default colors for shading
-            this.tessellator.setAmbientColor(new Color(0.50f, 0.50f, 0.50f));
+            //Call to function to set up the layers for the model
+            setUpLayers();
             
-//            LayerList WWLayers = m.getLayers();
-//            String TheLayers = WWLayers.toString();
-//            //System.out.println(TheLayers);
-            
-            for (Layer layer : m.getLayers())
-            {
-//            if (layer instanceof TiledImageLayer)
-//            {
-//                ((TiledImageLayer) layer).setShowImageTileOutlines(false);
-//            }
-            if (layer instanceof LandsatI3)
-            {
-                ((TiledImageLayer) layer).setDrawBoundingVolumes(false);
-                ((TiledImageLayer) layer).setEnabled(false);
-            }
-            if (layer instanceof CompassLayer)
-            {
-                ((CompassLayer) layer).setShowTilt(true);
-                ((CompassLayer) layer).setEnabled(true);
-            }
-            if (layer instanceof PlaceNameLayer)
-            {
-                ((PlaceNameLayer) layer).setEnabled(false); // off
-            }
-            if (layer instanceof WorldMapLayer)
-            {
-                ((WorldMapLayer) layer).setEnabled(false); // off
-            }
-            if (layer instanceof USGSUrbanAreaOrtho)
-            {
-                ((USGSUrbanAreaOrtho) layer).setEnabled(false); // off
-            }
-            // save star layer
-            if (layer instanceof StarsLayer)
-            {
-                starsLayer = (StarsLayer) layer;
-                
-                // for now just enlarge radius by a factor of 10
-                starsLayer.setRadius(starsLayer.getRadius()*10.0);
-            }
-            if(layer instanceof CountryBoundariesLayer)
-            {
-                ((CountryBoundariesLayer) layer).setEnabled(false); // off by default
-            }
-            if(layer instanceof AtmosphereLayer)
-            {
-                atmosphereLayer = (AtmosphereLayer) layer;
-                atmosphereLayer.setEnabled(true);
-            }
-            } // for layers
-            
-            //Visualization Tests
-//            m.setShowWireframeExterior(true);
-//            m.setShowWireframeInterior(true);
-            
-            // Add position listener to update light direction relative to the eye
-            this.wwd.addPositionListener(new PositionListener()
-            {
-                Vec4 eyePoint;
+            // First call to update time to current time:
+            currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate(); // ini time
 
-                @Override
-                    public void moved(PositionEvent event)
-                    {
-                        if(eyePoint == null || eyePoint.distanceTo3(wwd.getView().getEyePoint()) > 1000)
-                        {
-                            update(true);
-                            eyePoint = wwd.getView().getEyePoint();
-                        }
-                    }
-            });
+            // Just a little touch up -- remove the milliseconds from the time
+            int mil = currentJulianDate.get(Time.MILLISECOND);
+            currentJulianDate.add(Time.MILLISECOND,1000-mil); // Remove the milliseconds (so it shows an even second)
 
-            setSunShadingOn(true); // enable sun shading by default
-            // END Sun Shading -------------
+            // Set time string format
+            currentJulianDate.setDateFormat(dateformat);
+            scenarioEpochDate.setDateFormat(dateformat);
             
+            //Create 2D panel 
             this.twoDpanel = createNew2dWindow();
-            //Content.add(twoDpanel, BorderLayout.CENTER);
             
-                        //SET UP GUI
+            //SET UP GUI
             //Add a tool bar
             toolbar = new JToolBar();
             Content.add(toolbar, BorderLayout.PAGE_START);
             
-            //Add the play button
+            //Add the canBePlayed button
             playScenario = new JButton("Play");
-            playScenario.setBounds(30,30,70,30);
             playScenario.addActionListener((new java.awt.event.ActionListener() {
                 @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -403,7 +232,6 @@ public class WWJApplet extends JApplet
             
             //Add pause button
             pauseScenario = new JButton("Pause");
-            pauseScenario.setBounds(30,30,70,30);
             pauseScenario.addActionListener((new java.awt.event.ActionListener() {
                 @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -413,7 +241,6 @@ public class WWJApplet extends JApplet
             
             //Reset button
             resetScenario = new JButton("Reset");
-            resetScenario.setBounds(30,30,70,30);
             resetScenario.addActionListener((new java.awt.event.ActionListener() {
                 @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -428,7 +255,6 @@ public class WWJApplet extends JApplet
             
             //Increase step size
             stepSizeUp = new JButton("+");
-            stepSizeUp.setBounds(30,30,70,30);
             stepSizeUp.addActionListener((new java.awt.event.ActionListener() {
                 @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -449,7 +275,6 @@ public class WWJApplet extends JApplet
             
             //Decrease step size
             stepSizeDown = new JButton("-");
-            stepSizeDown.setBounds(30,30,70,30);
             stepSizeDown.addActionListener((new java.awt.event.ActionListener() {
                 @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -459,7 +284,6 @@ public class WWJApplet extends JApplet
             
             //ECI Button
             ECIon = new JRadioButton("ECI");
-            ECIon.setBounds(30,30,70,30);
             ECIon.setSelected(true);
             ECIon.addActionListener((new java.awt.event.ActionListener() {
                 @Override
@@ -470,7 +294,6 @@ public class WWJApplet extends JApplet
             
             //ECEF Button
             ECEFon = new JRadioButton("ECEF");
-            ECEFon.setBounds(30,30,50,30);
             ECEFon.setSelected(true);
             ECEFon.addActionListener((new java.awt.event.ActionListener() {
                 @Override
@@ -478,12 +301,13 @@ public class WWJApplet extends JApplet
                 ecefButtonActionPerformed(evt);
             }}));
             toolbar.add(ECEFon);
-            //Connet the radio buttons
+            
+            //Connect the Radio Buttons (ECI and ECEF)
             ButtonGroup bg = new ButtonGroup();
             bg.add(ECIon);
             bg.add(ECEFon);    
                         
-            //two D view Button
+            //2D View Button
             twoDbutton = new JRadioButton("2D View");
             twoDbutton.setSelected(false);
             twoDbutton.addActionListener((new java.awt.event.ActionListener() {
@@ -493,7 +317,7 @@ public class WWJApplet extends JApplet
             }}));
             toolbar.add(twoDbutton);
             
-            //three D view Button
+            //3D View Button
             threeDbutton = new JRadioButton("3D View");
             threeDbutton.setSelected(true);
             threeDbutton.addActionListener((new java.awt.event.ActionListener() {
@@ -502,6 +326,8 @@ public class WWJApplet extends JApplet
                 threeDButtonActionPerformed(evt);
             }}));
             toolbar.add(threeDbutton);
+            
+            //Connect 2D and 3D view buttons
             ButtonGroup bgView = new ButtonGroup();
             bgView.add(twoDbutton);
             bgView.add(threeDbutton); 
@@ -516,161 +342,39 @@ public class WWJApplet extends JApplet
             statusDisplay.setText("Running");
             toolbar.add(statusDisplay);
             
-            // Add the status bar
-            statusBar = new StatusBar();
-            this.getContentPane().add(statusBar, BorderLayout.PAGE_END);
-
-            // Forward events to the status bar to provide the cursor position info.
-            statusBar.setEventSource(this.wwd);
-
-            // Setup a select listener for the worldmap click-and-go feature
-            this.wwd.addSelectListener(new ClickAndGoSelectListener(this.wwd, WorldMapLayer.class));
+            //Add real time checkbox
+            realTime = new JCheckBox("Real Time");
+            realTime.setSelected(false);
+            realTime.addActionListener((new java.awt.event.ActionListener(){
+                @Override
+                        public void actionPerformed(java.awt.event.ActionEvent evt){
+                    realTimeActionPerformed(evt);   
+                }}));
+            toolbar.add(realTime); 
             
-                        //Read satellites
-            try{
-            input = new OnlineInput("http://localhost:8080/parameters.html");
-            int n = input.getSize();
-            for (int i = 0; i <n; i++)
-            {
-                addCustomSat(input.getSatelliteName(i));
-            }
-            StkEphemerisReader reader = new StkEphemerisReader();
-            double tempTime;
-            for (int i = 0; i <n; i++)
-            {	
-                    AbstractSatellite S = satHash.get(input.getSatelliteName(i));
-                    S.setGroundTrackIni2False();
-                    S.setPlot2DFootPrint(false);
-                    S.setShow3DFootprint(false);
-                    if (input.getColor(i).startsWith("b"))
-                    {
-                            S.setSatColor(Color.BLUE);
-                    }
-                    else if (input.getColor(i).startsWith("g"))
-                    {
-                            S.setSatColor(Color.GREEN);
-                    }
-                    else if (input.getColor(i).startsWith("r"))
-                    {
-                            S.setSatColor(Color.RED);
-                    }
-                    else if (input.getColor(i).startsWith("y"))
-                    {
-                            S.setSatColor(Color.YELLOW);
-                    }
-                    else if (input.getColor(i).startsWith("w"))
-                    {
-                            S.setSatColor(Color.WHITE);
-                    }
-                    else if (input.getColor(i).startsWith("p"))
-                    {
-                            S.setSatColor(Color.PINK);
-                    }
-                    else if (input.getColor(i).startsWith("o"))
-                    {
-                            S.setSatColor(Color.ORANGE);
-                    }
-                    vector = reader.readStkEphemeris(input.getEphemerisLocation(i));
-                    tempTime = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
-                    if(tempTime < time)
-                    {
-                        time = tempTime;
-                    }
-                    S.setEphemeris(vector);
-                    // set default 3d model and turn on the use of 3d models
-//                    S.setThreeDModelPath("globalstar/Globalstar.3ds");
-//                    S.setUse3dModel(true);
-                    if (input.getModelCentered(i))
-                    {
-                           statusDisplay.setText("Can't do that yet!");
-                    }
-                    else
-                    {
-                            //dont do anything!
-                    }
-            }
-            setTime(time);
-            statusDisplay.setText("Satellites Added");
-            }
-            catch(Exception e)
-            {statusDisplay.setText("No satellites found");
-            inputSat = false;
-            currentJulianDate.update2CurrentTime();}            //Read satellites
-            try{
-            input = new OnlineInput("http://localhost:8080/parameters.html");
-            int n = input.getSize();
-            for (int i = 0; i <n; i++)
-            {
-                addCustomSat(input.getSatelliteName(i));
-            }
-            StkEphemerisReader reader = new StkEphemerisReader();
-            double tempTime;
-            for (int i = 0; i <n; i++)
-            {	
-                    AbstractSatellite S = satHash.get(input.getSatelliteName(i));
-                    S.setGroundTrackIni2False();
-                    S.setPlot2DFootPrint(false);
-                    S.setShow3DFootprint(false);
-                    if (input.getColor(i).startsWith("b"))
-                    {
-                            S.setSatColor(Color.BLUE);
-                    }
-                    else if (input.getColor(i).startsWith("g"))
-                    {
-                            S.setSatColor(Color.GREEN);
-                    }
-                    else if (input.getColor(i).startsWith("r"))
-                    {
-                            S.setSatColor(Color.RED);
-                    }
-                    else if (input.getColor(i).startsWith("y"))
-                    {
-                            S.setSatColor(Color.YELLOW);
-                    }
-                    else if (input.getColor(i).startsWith("w"))
-                    {
-                            S.setSatColor(Color.WHITE);
-                    }
-                    else if (input.getColor(i).startsWith("p"))
-                    {
-                            S.setSatColor(Color.PINK);
-                    }
-                    else if (input.getColor(i).startsWith("o"))
-                    {
-                            S.setSatColor(Color.ORANGE);
-                    }
-                    vector = reader.readStkEphemeris(input.getEphemerisLocation(i));
-                    tempTime = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC");
-                    if(tempTime < time)
-                    {
-                        time = tempTime;
-                    }
-                    S.setEphemeris(vector);
-                    // set default 3d model and turn on the use of 3d models
-//                    S.setThreeDModelPath("globalstar/Globalstar.3ds");
-//                    S.setUse3dModel(true);
-                    if (input.getModelCentered(i))
-                    {
-                           statusDisplay.setText("Can't do that yet!");
-                    }
-                    else
-                    {
-                            //dont do anything!
-                    }
-            }
-            setTime(time);
-            statusDisplay.setText("Satellites Added");
-            }
-            catch(Exception e)
-            {statusDisplay.setText("No satellites found");
-            inputSat = false;
-            currentJulianDate.update2CurrentTime();}
+            //Add orbit trace checkbox
+            orbitTrace = new JCheckBox("Orbit Trace");
+            orbitTrace.setSelected(true);
+            orbitTrace.addActionListener((new java.awt.event.ActionListener(){
+                @Override
+                        public void actionPerformed(java.awt.event.ActionEvent evt){
+                    orbitTraceActionPerformed(evt);   
+                }}));
+            toolbar.add(orbitTrace);
             
-            updateTime(); // update plots
-            //System.out.print(this.getCurrentJulTime() + "\n");
+            //Add checkbox for user input updating
+            eUpdate = new JCheckBox("Auto Update");
+            eUpdate.setSelected(false);
+            eUpdate.addActionListener((new java.awt.event.ActionListener(){
+                @Override
+                        public void actionPerformed(java.awt.event.ActionEvent evt){
+                    eUpdateActionPerformed(evt);   
+                }}));
+            toolbar.add(eUpdate);
             
-            setupView(); // setup needed viewing specs and use of AutoClipBasicOrbitView
+            inputSatellites(); //Function that reads user input file and adds satellites
             
+            //WORLD WIND APPLET CODE (UNMODIFIED)
             // Call javascript appletInit()
             try
             {
@@ -681,7 +385,6 @@ public class WWJApplet extends JApplet
             {
             }
         }
-                
         catch (Throwable e)
         {
         }
@@ -714,7 +417,7 @@ public class WWJApplet extends JApplet
         {
         }
 
-        // Shut down World Wind
+        // Shut down World Wind when the browser stops this Applet.
         WorldWind.shutDown();
     }
 
@@ -868,92 +571,18 @@ public class WWJApplet extends JApplet
         ga.getAttributes().setFrameShape(AVKey.SHAPE_NONE);
         ga.getAttributes().setEffect(AVKey.TEXT_EFFECT_OUTLINE);
         ga.getAttributes().setTextAlign(AVKey.CENTER);
-        this.labelsLayer.addRenderable(ga);
+//        this.labelsLayer.addRenderable(ga);
     }
+    //END OF WORLDWIND APPLET CODE (UNMODIFIED)
+    //JSatTrak added code
     
-    //Added JSatTrak methods/classes
-    public void updateTime()
+    /*
+     * Input name of satellite, adds that satellite to the satHash
+     * It is called in inputSatellites function
+     */
+    public void addCustomSat(String name)
     {
-        // save old time
-        double prevJulDate = currentJulianDate.getJulianDate();
-        
-        // Get current simulation time!             
-        /*if(realTimeModeCheckBox.isSelected())
-        {
-            // real time mode -- just use real time
-            
-            // Get current time in GMT
-            // calculate current Juilian Date, update to current time
-            currentJulianDate.update2CurrentTime(); //update();// = getCurrentJulianDate();
-
-        }*/
-        //else
-//        {
-//            // non-real time mode add fraction of time to current jul date
-//            //currentJulianDate += currentPlayDirection*animationSimStepDays;
-//            currentJulianDate.addSeconds( currentPlayDirection*animationSimStepSeconds );
-//        }
-        currentJulianDate.addSeconds( currentPlayDirection*animationSimStepSeconds );
-        // update sun position
-        sun.setCurrentMJD(currentJulianDate.getMJD());
-                
-        // if time jumps by more than 91 minutes check period of sat to see if
-        // ground tracks need to be updated
-        double timeDiffDays = Math.abs(currentJulianDate.getJulianDate()-prevJulDate); // in days
-        checkTimeDiffResetGroundTracks(timeDiffDays);        
-                
-        // update date box:
-        dateDisplay.setText( currentJulianDate.getDateTimeStr() );//String.format("%tc",cal) );
-        
-        // now propogate all satellites to the current time  
-        for (AbstractSatellite sat : satHash.values() )
-        {
-            sat.propogate2JulDate( currentJulianDate.getJulianDate() );
-        } // propgate each sat 
-        
-        // update any other time dependant objects
-        for(JSatTrakTimeDependent tdo : timeDependentObjects)
-        {
-            if(tdo != null)
-            {
-                tdo.updateTime(currentJulianDate, satHash);
-            }
-        }
-        WWsetMJD(currentJulianDate.getMJD());        
-        forceRepainting(); // repaint 2d/3d earth
-        
-        
-    } // update time
- public void checkTimeDiffResetGroundTracks(double timeDiffDays)
-    {
-        if( timeDiffDays > 91.0/1440.0)
-        {
-            // big time jump
-            for (AbstractSatellite sat : satHash.values() )
-            {
-                if(sat.getShowGroundTrack() && (sat.getPeriod() <= (timeDiffDays*24.0*60.0) ) )
-                {
-                    sat.setGroundTrackIni2False();
-                    //System.out.println(sat.getName() +" - Groundtrack Initiated");
-                }
-            }
-        }
-    } // checkTimeDiffResetGroundTracks
-     public void forceRepainting()
-    {
-        this.update(false);
-        wwd.redraw();
-        try
-        {
-        twoDpanel.repaint();
-        }
-        catch(Exception e)
-        {System.out.println("Didn't work");}
-    }// forceRepainting
-     
-public void addCustomSat(String name)
-    {
-        // if nothing given:
+        // If nothing given:
         if(name == null || name.equalsIgnoreCase(""))
         {
             System.out.println("returned");
@@ -964,97 +593,150 @@ public void addCustomSat(String name)
         
         satHash.put(name, prop);
 
-        // set satellite time to current date
+        // Set satellite time to current date
         prop.propogate2JulDate(this.getCurrentJulTime());
     }
+    
+    
+     // Returns scenarioEpochDate
+     // It is called in addCustomSat
+     
     public Time getScenarioEpochDate()
     {
         return scenarioEpochDate;
     }
-        public double getCurrentJulTime()
+    
+    
+     // Returns Julian date (double)
+     // Used in addCustomSat and animateApplet
+     public double getCurrentJulTime()
     {
         return currentJulianDate.getJulianDate();
     }
-    private RenderableLayer createLatLongLinesLayer()
+    
+   
+    //  Given an input of milliseconds, adds that time to scenario
+    //  used in setTime() and inputSatellites
+     public void setTime(long millisecs)
     {
-        RenderableLayer shapeLayer = new RenderableLayer();
-
-            // Generate meridians
-            ArrayList<Position> positions = new ArrayList<Position>(3);
-            double height = 30e3; // 10e3 default
-            for (double lon = -180; lon < 180; lon += 10)
-            {
-                Angle longitude = Angle.fromDegrees(lon);
-                positions.clear();
-                positions.add(new Position(Angle.NEG90, longitude, height));
-                positions.add(new Position(Angle.ZERO, longitude, height));
-                positions.add(new Position(Angle.POS90, longitude, height));
-                Polyline polyline = new Polyline(positions);
-                polyline.setFollowTerrain(false);
-                polyline.setNumSubsegments(30);
-                
-                if(lon == -180 || lon == 0)
-                {
-                    polyline.setColor(new Color(1f, 1f, 0f, 0.5f)); // yellow
-                }
-                else
-                {
-                    polyline.setColor(new Color(1f, 1f, 1f, 0.5f));
-                }
-                
-                shapeLayer.addRenderable(polyline);
-            }
-
-            // Generate parallels
-            for (double lat = -80; lat < 90; lat += 10)
-            {
-                Angle latitude = Angle.fromDegrees(lat);
-                positions.clear();
-                positions.add(new Position(latitude, Angle.NEG180, height));
-                positions.add(new Position(latitude, Angle.ZERO, height));
-                positions.add(new Position(latitude, Angle.POS180, height));
-                Polyline polyline = new Polyline(positions);
-                polyline.setPathType(Polyline.LINEAR);
-                polyline.setFollowTerrain(false);
-                polyline.setNumSubsegments(30);
-                
-                if(lat == 0)
-                {
-                    polyline.setColor(new Color(1f, 1f, 0f, 0.5f));
-                }
-                else
-                {
-                    polyline.setColor(new Color(1f, 1f, 1f, 0.5f));
-                }
-                
-                shapeLayer.addRenderable(polyline);
-            }
-
-            return shapeLayer;
+    currentJulianDate.set(millisecs);
+        
+        // update maps ----------------
+        // set animation direction = 0
+        currentPlayDirection = 0;
+        // update graphics
+        updateTime();
     }
-// Update worldwind wun shading
+    
+    
+     // Set the current time of the app.
+     // @param julianDate Julian Date
+    public void setTime(double julianDate)
+    {
+        GregorianCalendar gc = Time.convertJD2Calendar(julianDate);
+        setTime(gc.getTimeInMillis());        
+    }
+
+   
+    // Updates time in scenario and repaints World Wind.  
+    // Updates sun postion, ground track, date display, satellites, and ECI/ECEF layers     
+    public void updateTime()
+    {
+        // Save Old Time
+        double prevJulDate = currentJulianDate.getJulianDate();            
+
+        //Adds seconds (play direction should be 1 or 0)
+        //This is where the actual Stepping occurs
+        currentJulianDate.addSeconds( currentPlayDirection*animationSimStepSeconds );
+        // Update sun position
+        sun.setCurrentMJD(currentJulianDate.getMJD());
+                
+        // If time jumps by more than 91 minutes check period of sat to see if
+        // ground tracks need to be updated.  Ground Tracks currently not shown in Applet
+        double timeDiffDays = Math.abs(currentJulianDate.getJulianDate()-prevJulDate); // in days
+        checkTimeDiffResetGroundTracks(timeDiffDays);
+
+                
+        // Update Date Box:
+        dateDisplay.setText( currentJulianDate.getDateTimeStr() );//String.format("%tc",cal) );
+        
+        // Now propogate all satellites to the current time  
+        for (AbstractSatellite sat : satHash.values() )
+        {
+            sat.propogate2JulDate( currentJulianDate.getJulianDate() );
+        } // propgate each sat 
+        
+        // Update any other time dependant objects
+        for(JSatTrakTimeDependent tdo : timeDependentObjects)
+        {
+            if(tdo != null)
+            {
+                tdo.updateTime(currentJulianDate, satHash);
+            }
+        }
+        //Update ECI/ECEF layers
+        WWsetMJD(currentJulianDate.getMJD());     
+        if(nonRealTime)
+        {
+            oldTime = currentJulianDate.getJulianDate();
+        }
+        forceRepainting(); // repaint 2d/3d earth
+    } // update time
+    
+ 
+    // Checks to see if the ground track needs to be reset
+    // Not used in Applet
+     public void checkTimeDiffResetGroundTracks(double timeDiffDays)
+    {
+        if( timeDiffDays > 91.0/1440.0)
+        {
+            // Big time jump
+            for (AbstractSatellite sat : satHash.values() )
+            {
+                if(sat.getShowGroundTrack() && (sat.getPeriod() <= (timeDiffDays*24.0*60.0) ) )
+                {
+                    sat.setGroundTrackIni2False();
+                    //System.out.println(sat.getName() +" - Groundtrack Initiated");
+                }
+            }
+        }
+    } // checkTimeDiffResetGroundTracks
+    
+    /*
+     * Repaints the view, 2D and 3D
+     */
+    public void forceRepainting()
+    {
+        this.update(false);
+        wwd.redraw();
+        try
+        {
+        twoDpanel.repaint();
+        }
+        catch(Exception e)
+        {}
+    }// forceRepainting
+    
+    // Update worldwind sun shading
     private void update(boolean redraw)
     {
         if(sunShadingOn) //this.enableCheckBox.isSelected())
         {
             // Compute Sun position according to current date and time
             LatLon sunPos = spp.getPosition();
-            Vec4 sunvar = wwd.getModel().getGlobe().computePointFromPosition(new Position(sunPos, 0)).normalize3();
-
-            Vec4 light = sunvar.getNegative3();
-            this.tessellator.setLightDirection(light);
+            Vec4 sunvar = wwd.getModel().getGlobe().computePointFromPosition(new Position(sunPos, 0)).normalize3();         
             this.lensFlareLayer.setSunDirection(sunvar);
-            //Already an atmosphere layer!
-            atmosphereLayer.setSunDirection(sunvar);
+
             // Redraw if needed
             if(redraw)
             {
                 wwd.redraw();
             }
-        } // if sun Shading
+        } // If sun Shading
         
-    } // update - for sun shading
-
+    } // Update - for sun shading
+    
+    //Turns on sun shading- really only for lens - flare layer
     public void setSunShadingOn(boolean useSunShading)
     {
         if(useSunShading == sunShadingOn)
@@ -1064,40 +746,507 @@ public void addCustomSat(String name)
 
         sunShadingOn = useSunShading;
 
-        if(sunShadingOn)
-        {
-            // enable shading - use special atmosphere
-            for(int i = 0; i < wwd.getModel().getLayers().size(); i++)
-            {
-                Layer l = wwd.getModel().getLayers().get(i);
-                if(l instanceof SkyGradientLayer)
-                {
-                    wwd.getModel().getLayers().set(i, this.atmosphereLayer);
-                }
-            }
-        }
-        else
-        {
-            // disable shading
-            // Turn off lighting
-            this.tessellator.setLightDirection(null);
-            this.lensFlareLayer.setSunDirection(null);
-            this.atmosphereLayer.setSunDirection(null);
-
-            // use standard atmosphere
-            for(int i = 0; i < wwd.getModel().getLayers().size(); i++)
-            {
-                Layer l = wwd.getModel().getLayers().get(i);
-                if(l instanceof AtmosphereLayer)
-                {
-                    wwd.getModel().getLayers().set(i, new SkyGradientLayer());
-                }
-            }
-            
-        } // if/else shading
-
         this.update(true); // redraw
     } // setSunShadingOn
+
+//Play scenario
+public void playButtonActionPerformed(ActionEvent e)
+{
+    //If scenario isn't already playing and has satellites
+    if(canBePlayed && inputSat)
+    {
+        //Update every 50 miliseconds
+        animationRefreshRateMs = 50;
+        //Set step size to non-real time step size used previously (60 second default)
+        animationSimStepSeconds = tempStep;
+        //Animate
+        animateApplet(true);
+        //Already playing!
+        canBePlayed = false;
+        //Update display
+        stepDisplay.setText("" + animationSimStepSeconds);
+        //Hasn't been reset
+        reset = false;
+    }
+    else if(end)
+    {/* Already playing and/or no satellites */}
+    
+}
+
+//Pause scenario
+public void pauseButtonActionPerformed(ActionEvent e)
+{
+    //If play: means scenario can be played (Aka isn't already playing)
+    if(canBePlayed)
+    {}
+    //Scenario is playing
+    else
+    {
+        //Stop animation
+        animateApplet(false);
+        //Turn off real time if applicable
+        realTime.setSelected(false);
+        //Update display
+        statusDisplay.setText("Scenario Paused");
+        //Isn't already playing
+        canBePlayed = true; 
+        //Non real time
+        nonRealTime = true;
+    }
+}
+
+//Reset scenario
+public void resetButtonActionPerformed(ActionEvent e)
+{
+    //If scenario has been reset
+    if(reset)
+    {}
+    //Scenario needs to be reset
+    else{
+    //Stop playing
+    animateApplet(false);
+    //Scenario isn't playing (can be played)
+    canBePlayed = true;
+    //Update display
+    statusDisplay.setText("Scenario Reset");
+    //Not in real time mode
+    realTime.setSelected(false);
+    //Non real time
+    nonRealTime = true;
+    //Reset step size
+    //If there are satellites, set time to user requested time
+    if(inputSat)
+    {setTime(time);}
+    else //Set time to current time for no satellites
+    {currentJulianDate.update2CurrentTime();} 
+    //Has been reset
+    reset = true;
+    }
+}
+
+//Increase step size
+public void stepUpButtonActionPerformed(ActionEvent e)
+{
+    //If at maximum step size, do nothing
+    if(stepNumber == steps.length-1)
+    {
+            statusDisplay.setText("Maximum Step Size Reached");
+    }
+    //Can be increased
+    else
+    {
+        //Only increase step size in non-real time mode
+        if(nonRealTime)
+        {//Get next step size in array, increase corresponding index
+             animationSimStepSeconds = steps[stepNumber+1];
+             statusDisplay.setText("Step Size Increased");
+             stepNumber = stepNumber+1;
+             tempStep = animationSimStepSeconds; //Save step size for switch between real-time and non-real time
+        }
+        else
+        {statusDisplay.setText("Real Time Mode");}
+
+    stepDisplay.setText("" +animationSimStepSeconds);
+    }
+}
+
+//Decrease step size
+public void stepDownButtonActionPerformed(ActionEvent e)
+{
+    if(stepNumber>0)
+    {
+        if(nonRealTime)
+        {//Decrease step size in array by one, descrease corresponding index
+            animationSimStepSeconds = steps[stepNumber-1];
+            statusDisplay.setText("Step Size Decreased");
+            stepNumber = stepNumber-1;
+            tempStep = animationSimStepSeconds; //Save step size for switch between real-time and non-real time
+        }
+        else
+        {statusDisplay.setText("Real Time Mode");}
+    stepDisplay.setText("" + animationSimStepSeconds);
+    }
+    else //Already at minimum step size
+    {
+        statusDisplay.setText("Minimum Step Size Reached");
+    }
+}
+
+//ECI mode
+public void eciButtonActionPerformed(ActionEvent e)
+{
+    viewModeECI = true;
+    statusDisplay.setText("Earth Centered Inertial View");
+}
+
+//ECEF mode
+public void ecefButtonActionPerformed(ActionEvent e)
+{
+    viewModeECI = false;
+    statusDisplay.setText("Earth Centered Earth Fixed View");
+}
+
+//Switch to 2D window
+public void twoDButtonActionPerformed(ActionEvent e)
+{
+    if(twoDon)
+    {/* Already have a 2D window! */}
+    else
+    {
+    try
+    {
+        //Remove wwd so 2D window can take its place
+        Content.remove(wwd);
+    }
+    catch(Exception nopanel)
+    {}
+    //Add 2D window
+    Content.add(twoDpanel, BorderLayout.CENTER);
+    //Window only appears after resizing - so automatically resize and resize back to original
+    this.setSize(this.getWidth()-1, this.getHeight());
+    this.setSize(this.getWidth()+1, this.getHeight());
+    //Window on
+    twoDon = true;
+    statusDisplay.setText("2D View");
+    }
+}
+public void threeDButtonActionPerformed(ActionEvent e)
+{
+    if(twoDon)
+    {
+    try
+    {
+        //Remove 2D window
+        Content.remove(twoDpanel);
+        //Remove satellites!  Or else you end up adding multiple copies of the satellites
+        timeDepLayer.removeAllRenderables();
+        eciLayer.removeAllRenderables();
+        ecefLayer.removeAllRenderables();
+        m.getLayers().remove(eciLayer);
+        m.getLayers().remove(ecefLayer);
+        m.getLayers().remove(timeDepLayer);
+
+    }
+    catch(Exception nopanel)
+    {}
+    Content.add(wwd, BorderLayout.CENTER); //Add worldwind
+    setUpLayers(); //Set up worldwind layers again
+    twoDon = false; //3D view
+    statusDisplay.setText("3D View");
+    }
+}
+
+//If user attempts to add a custom step size by typing in the box!
+public void stepDisplayActionPerformed(ActionEvent e)
+{
+    //Assume it worked
+    boolean successStep = true;
+    try
+    {
+        String text = stepDisplay.getText(); //Get their input
+        tempStep = Double.parseDouble(text); //Attempt to make it a double
+    }
+    catch(Exception oops)
+    { //Didn't work
+        successStep = false; 
+        statusDisplay.setText("Improper step size");
+    }
+    if(successStep)
+    { //Worked
+        if(nonRealTime)
+        { //Change step size
+            animationSimStepSeconds = tempStep;
+            statusDisplay.setText("Step Size Changed");
+        }
+        else //real-time mode, don't change step size
+        {statusDisplay.setText("Real Time Mode");}
+    }
+}
+private void realTimeActionPerformed(ActionEvent evt)
+{
+    if(nonRealTime)
+    {//Switch to real time mode
+        animateApplet(false); //Stop applet
+        nonRealTime = false; //Real time
+        currentJulianDate.update2CurrentTime(); //Set time to current system time
+        setTime(currentJulianDate.getJulianDate()); //Set scenario time
+        animationSimStepSeconds = 1; //Step size of 1 second
+        animationRefreshRateMs = 1000; //Update every 1 second
+        stepDisplay.setText("" + animationSimStepSeconds); //Change step size display
+        statusDisplay.setText("Real Time Mode"); //Change status
+        reset = false; //No longer reset
+        if(canBePlayed)
+        {//Play scenario
+        animateApplet(true);
+        canBePlayed = false;
+        }
+    }
+    else
+    {//Switch to non-real time mode
+        setTime(oldTime); //Set time back to time before real time mode was activated
+        nonRealTime = true; 
+        animationRefreshRateMs = 50; //Update every 50 miliseconds
+        animationSimStepSeconds = tempStep; //Change step size back to previous step size before real time mode
+        stepDisplay.setText("" + animationSimStepSeconds);
+        statusDisplay.setText("Non-real Time Mode");
+        animateApplet(false); // Stop playing
+        canBePlayed = true; //Ready to play (not playing)
+        reset = false; //Not reset
+    }
+}
+private void orbitTraceActionPerformed(ActionEvent evt)
+{
+    if(!updating && inputSat)
+    {//Satellites are already added
+    if(orbitShown)
+    {//Orbit is already displayed, remove it
+    for(int i = 0; i<input.getSize(); i++)
+    {//For each satellite in scenario
+        if(satHash.get(input.getSatelliteName(i)).isDisplayed())
+        {//If satellite is currently being displayed, turn off orbits
+        satHash.get(input.getSatelliteName(i)).setShow3DOrbitTrace(false);
+        satHash.get(input.getSatelliteName(i)).setShow3DOrbitTraceECI(false);
+        satHash.get(input.getSatelliteName(i)).setShowGroundTrack(false);
+        }
+    }
+    forceRepainting(); //Repaint
+    orbitShown = false; //No orbits shown
+    }
+    else
+    {//No orbits showing
+    for(int i = 0; i<input.getSize(); i++)
+    {//For each satellite in scenario
+        if(satHash.get(input.getSatelliteName(i)).isDisplayed())
+        {//If satellite is currently being displayed, turn on orbits
+        satHash.get(input.getSatelliteName(i)).setShow3DOrbitTrace(true);
+        satHash.get(input.getSatelliteName(i)).setShow3DOrbitTraceECI(true);
+        satHash.get(input.getSatelliteName(i)).setShowGroundTrack(true);
+        }
+    }
+    forceRepainting(); //repaint
+    orbitShown = true; //orbits shown
+    }}
+}
+private void eUpdateActionPerformed(ActionEvent e)
+{
+    if(update) //If automatic update is on, set off when clicked
+    {update = false;}
+    else //If automatic update is off, set on when clicked
+    {update = true;}
+    eTimer = new Timer(6000, new ActionListener() //create update timer //FIRST NUMBER IS UPDATE INTERVAL IN MILISECONDS!
+            {
+            @Override
+                public void actionPerformed(ActionEvent event)
+                {
+                    overrideTime = true; //Do not change time when re-reading input file
+                    if(update)
+                    { //Update scenario
+                    updating = true; //Do not repaint during this time 
+                    satHash.clear(); //Remove satellites
+                    inputSatellites(); //Add satellites, but ignore changing time
+                    updating = false; //Can repaint
+                    statusDisplay.setText("Ephemeris Updated");
+                    displayed = false; //Variable for satus display: prevents update from constantly overriding other status messages
+                    }
+                    if(!update) //Stop updating!
+                    {
+                        eTimer.stop(); //Stop timer
+                        if(!displayed) //If it hasn't already been displayed
+                        {statusDisplay.setText("Ephemeris Update Stopped");
+                        displayed = true; //Has been displayed
+                        }
+                    }
+                    try{
+                    if(orbitTrace.isSelected()) //If orbit traces were displayed, need to redraw
+                    {
+                        for(int i = 0; i<input.getSize(); i++)
+                        {
+                            if(satHash.get(input.getSatelliteName(i)).isDisplayed())
+                            {
+                            satHash.get(input.getSatelliteName(i)).setShow3DOrbitTrace(true);
+                            satHash.get(input.getSatelliteName(i)).setShow3DOrbitTraceECI(true);
+                            satHash.get(input.getSatelliteName(i)).setShowGroundTrack(true);
+                            }
+                        }
+                        forceRepainting();
+                        orbitShown = true;
+                    }
+                    else //Need to prevent orbit traces from showing if they aren't supposed to be
+                    {
+                        for(int i = 0; i<input.getSize(); i++)
+                        {
+                            if(satHash.get(input.getSatelliteName(i)).isDisplayed())
+                            {
+                            satHash.get(input.getSatelliteName(i)).setShow3DOrbitTrace(false);
+                            satHash.get(input.getSatelliteName(i)).setShow3DOrbitTraceECI(false);
+                            satHash.get(input.getSatelliteName(i)).setShowGroundTrack(false);
+                            }
+                        }
+                        orbitShown = false;
+                        forceRepainting(); 
+                    }}
+                    catch(Exception e)
+                    {}
+                }//Action performed
+            }); //Timer
+    if(update) //Start timer
+    {eTimer.start();}
+    
+}
+
+//Animates the applet
+private void animateApplet(boolean b) {
+        if (b && inputSat) //If animate and there are satellites
+        {
+        statusDisplay.setText("Scenario Running");
+        //Hard Coded canBePlayed scenario
+        double date = this.getCurrentJulTime();
+        double currentMJDtime = date - AstroConst.JDminusMJD;
+        double deltaTT2UTC = Time.deltaT(currentMJDtime); // = TT - UTC
+        double maxTempTime = 0;
+        //Find the very last time in the very last ephemeris
+        for (int i = 1; i<=input.getSize(); i++ )
+        {
+            Vector<StateVector> ephemeris = satHash.get(input.getSatelliteName(i-1)).getEphemeris();
+            double tempTime = ephemeris.get(ephemeris.size()-1).state[0] - deltaTT2UTC;
+            if(tempTime > maxTempTime) //If this ephemeris time is greater than others
+            {
+                maxTempTime = tempTime; //Set as max ephemeris time
+            }
+        }
+        
+        final double maxTime =  maxTempTime;      
+        playTimer = new Timer(animationRefreshRateMs, new ActionListener()
+                {//Timer for playing scenario
+                @Override
+                    public void actionPerformed(ActionEvent event)
+                    {
+                    //Ensure we're still within ephemeris time range
+                    //include step size so orbit is still shown
+                    //without this, the very first instant the orbit is gone will be the end point
+                    double stepJulian = animationSimStepSeconds/86400;
+                    if(getCurrentJulTime() > (maxTime-stepJulian))
+                        {
+                            playTimer.stop(); //Stop playing!
+                            canBePlayed = true;
+                            statusDisplay.setText("End of Scenario");
+                        }
+                     if(!nonRealTime)
+                     {long time = System.currentTimeMillis();
+                     GregorianCalendar g = currentJulianDate.getCurrentGregorianCalendar();
+                     long currentTime = g.getTimeInMillis();
+                     long difference = time-currentTime;
+                     if (difference >=10000)
+                     {
+                         currentJulianDate.update2CurrentTime();
+                         setTime(currentJulianDate.getJulianDate());
+                                          }
+                               }
+                    // take one time step in the animation
+                    currentPlayDirection = 1;
+                    updateTime(); // animate
+                    }
+                });
+        playTimer.start();
+    }
+        else
+        { //Should not play!
+            if(canBePlayed)
+            {}
+            else
+            {if(playTimer != null) //If there is a timer created, stop it
+            {playTimer.stop();}
+            canBePlayed = true;
+            }
+        }
+    }
+
+//Adjusts ECI and ECEF views based on time
+public void WWsetMJD(double mjd)
+    {
+               
+        if(viewModeECI)
+        {
+//            // Hmm need to do something to keep the ECI view moving even after user interaction
+//            // seems to work after you click off globe after messing with it
+//            // this fixes the problem:
+            wwd.getView().stopMovement(); //seems to fix prop in v0.5 
+//            // update rotation of view and Stars
+            double theta0 = eciLayer.getRotateECIdeg();
+//
+            // UPDATE TIME
+            eciLayer.setCurrentMJD(mjd);
+//
+            double thetaf = eciLayer.getRotateECIdeg(); // degrees
+//
+//            // move view
+//
+//            //Quaternion q0 = ((BasicOrbitView) wwd.getView()).getRotation();
+//            //Vec4 vec = ((BasicOrbitView) wwd.getView()).getEyePoint();
+//            
+//            //Position pos = ((BasicOrbitView) wwd.getView()).getCurrentEyePosition();
+            Position pos = ((BasicOrbitView) wwd.getView()).getCenterPosition(); // WORKS
+//            
+//            // amount to rotate the globe (degrees) around poles axis
+            double rotateEarthDelta = thetaf - theta0; // deg
+//
+//            //Quaternion q = Quaternion.fromRotationYPR(Angle.fromDegrees(0), Angle.fromDegrees(rotateEarthDelta), Angle.fromDegrees(0.0));
+//            // rotate the earth around z axis by rotateEarthDelta
+//            //double[][] rz = MathUtils.R_z(rotateEarthDelta*Math.PI/180);
+//            //double[] newEyePos = MathUtils.mult(rz, new double[] {vec.x,vec.y,vec.z});
+////            Angle newLon = pos.getLongitude().addDegrees(-rotateEarthDelta);
+////            Position newPos = new Position(pos.getLatitude(),newLon,pos.getElevation());
+//            
+//            //Position newPos = pos.add(new Position(Angle.fromDegrees(0),Angle.fromDegrees(-rotateEarthDelta),0.0));
+            Position newPos = pos.add(new Position(Angle.fromDegrees(0),Angle.fromDegrees(-rotateEarthDelta),0.0)); // WORKS
+//            
+//            // rotation in 3D space is "added" to the quaternion by quaternion multiplication
+////            try // try around it to prevent problems when running the simulation and then opening a new 3D window (this is called before the wwj is initalized)
+////            {
+//                //((BasicOrbitView) wwd.getView()).setRotation(q0.multiply(q));
+//            // BUG -- ALWATS REORIENTS VIEW TO NORTH UP AND NO TILT!  -- fixed 15  Jul 2008 SEG
+//                //((BasicOrbitView) wwd.getView()).setEyePosition(newPos);
+               ((BasicOrbitView) wwd.getView()).setCenterPosition(newPos); // WORKS  -- fixed 15  Jul 2008 SEG
+////            }
+////            catch(Exception e)
+////            {
+////                // do nothing, it will catch up next update
+////            }
+//
+            // star layer
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+//            
+        } // if ECI
+        else
+        {
+            // EFEC - just update time
+            eciLayer.setCurrentMJD(mjd);
+            
+            // star layer
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
+        }
+        
+        // debug - reset view to follow sat
+        //setViewCenter(15000000); // set this only if user has picked a satellite to follow!
+
+        // update layer that needs time updates
+        timeDepLayer.setCurrentMJD(mjd);
+        
+    } // set MJD
+
+    //Create 2D window
+    public J2DEarthPanel createNew2dWindow()
+    {
+        
+        // create 2D Earth Panel:
+        J2DEarthPanel newPanel = new J2DEarthPanel(satHash, currentJulianDate, sun);
+
+        String windowName = "2D Earth Window";
+        newPanel.setName(windowName);
+        return newPanel;
+    }
+    
+    //Set up view preferences (used for model view mode which is currently unavailable)
     private void setupView()
     {
         if(modelViewMode == false)
@@ -1190,6 +1339,8 @@ public void addCustomSat(String name)
         } // model view mode
         
     } // setupView
+    
+    //Set view to either ECI or ECEF
     public void setViewModeECI(boolean viewModeECI)
     {
         this.viewModeECI = viewModeECI;
@@ -1197,307 +1348,247 @@ public void addCustomSat(String name)
         // take care of which view mode to use
         if(viewModeECI)
         {
-            // update stars
+            // Update Stars
             starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
         }
         else
         {
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(0.0)); // reset to normal
+            starsLayer.setLongitudeOffset(Angle.fromDegrees(0.0)); // Reset to Normal
         }
         
     }
-
-        public void setTime(long millisecs)
-    {
-        currentJulianDate.set(millisecs);
-        
-        // update maps ----------------
-        // set animation direction = 0
-        currentPlayDirection = 0;
-        // update graphics
-        updateTime();
-    }
     
-    /**
-     * Set the current time of the app.
-     * @param julianDate Julian Date
-     */
-    public void setTime(double julianDate)
+    //Add the layers to the World Wind applet
+    public void setUpLayers()
     {
-        GregorianCalendar gc = Time.convertJD2Calendar(julianDate);
-        setTime(gc.getTimeInMillis());        
-    }
+            // Add a renderable layer for application labels -- probably not necessary
+            this.labelsLayer = new RenderableLayer();
+            this.labelsLayer.setName("Labels");
+            insertBeforeLayerName(this.wwd, this.labelsLayer, "Compass");
 
-    private void animateApplet(boolean b) {
-        if (b)
-        {
-        statusDisplay.setText("Scenario Running");
-        //Hard Coded play scenario
-        double date = this.getCurrentJulTime();
-        double currentMJDtime = date - AstroConst.JDminusMJD;
-        double deltaTT2UTC = Time.deltaT(currentMJDtime); // = TT - UTC
-        double maxTempTime = 0;
-        //Find the very last time in the very last ephemeris
-        for (int i = 1; i<=input.getSize(); i++ )
-        {
-            Vector<StateVector> ephemeris = satHash.get(input.getSatelliteName(i-1)).getEphemeris();
-            double tempTime = ephemeris.get(ephemeris.size()-1).state[0] - deltaTT2UTC;
-            if(tempTime > maxTempTime)
-            {
-                maxTempTime = tempTime;
-            }
-        }
-        
-        final double maxTime =  maxTempTime;      
-        playTimer = new Timer(animationRefreshRateMs, new ActionListener()
-                {
-                @Override
-                    public void actionPerformed(ActionEvent event)
-                    {
-                    //Ensure we're still within ephemeris time range
-                    //include step size so orbit is still shown
-                    //without this, the very first instant the orbit is gone will be the end point
-                    double stepJulian = animationSimStepSeconds/86400;
-                    if(getCurrentJulianTime() > (maxTime-stepJulian))
-                        {
-                            playTimer.stop();
-                            play = true;
-                            statusDisplay.setText("End of Scenario");
-                        }
-                    // take one time step in the animation
-                    currentPlayDirection = 1;
-                    updateTime(); // animate
-                    }
-                });
-        playTimer.start();
-    }
-        else
-        {
-            if(play)
-            {}
-            else
-            {playTimer.stop();
-            play = true;
-            end = true;
-            statusDisplay.setText("End of Scenario");}
-        }
-    }
-    
-
-public void playButtonActionPerformed(ActionEvent e)
-{
-    if(play && inputSat)
-    {
-        animateApplet(true);
-        play = false;
-    }
-    else if(end)
-    {}
-    
-}
-public void pauseButtonActionPerformed(ActionEvent e)
-{
-    if(play)
-    {}
-    else
-    {
-        animateApplet(false);
-        statusDisplay.setText("Scenario Paused");
-        play = true; 
-    }
-}
-public void resetButtonActionPerformed(ActionEvent e)
-{
-
-    animateApplet(false);
-    play = true;
-    statusDisplay.setText("Scenario Reset");
-    if(inputSat)
-    {setTime(time);}
-    else
-    {currentJulianDate.update2CurrentTime();}
-}
-public void stepUpButtonActionPerformed(ActionEvent e)
-{
-    if(stepNumber == steps.length-1)
-    {
-            statusDisplay.setText("Maximum Step Size Reached");
-    }
-    else
-    {
-    animationSimStepSeconds = steps[stepNumber+1];
-    stepNumber = stepNumber+1;
-    stepDisplay.setText("" +animationSimStepSeconds);
-    statusDisplay.setText("Step Size Increased");
-    }
-}
-public void stepDownButtonActionPerformed(ActionEvent e)
-{
-    if(stepNumber>0)
-    {
-    animationSimStepSeconds = steps[stepNumber-1];
-    stepNumber = stepNumber-1;
-    stepDisplay.setText("" + animationSimStepSeconds);
-    statusDisplay.setText("Step Size Decreased");
-    }
-    else
-    {
-        statusDisplay.setText("Minimum Step Size Reached");
-    }
-}
-public void eciButtonActionPerformed(ActionEvent e)
-{
-    viewModeECI = true;
-    statusDisplay.setText("Earth Centered Inertial View");
-}
-public void ecefButtonActionPerformed(ActionEvent e)
-{
-    viewModeECI = false;
-    statusDisplay.setText("Earth Centered Earth Fixed View");
-}
-public void twoDButtonActionPerformed(ActionEvent e)
-{
-    if(twoDon)
-    {}
-    else
-    {
-    try
-    {
-        Content.remove(wwd);
-    }
-    catch(Exception nopanel)
-    {}
-    Content.add(twoDpanel, BorderLayout.CENTER);
-    this.setSize(this.getWidth()-1, this.getHeight());
-    this.setSize(this.getWidth()+1, this.getHeight());
-    twoDon = true;
-    statusDisplay.setText("2D View");
-    }
-}
-public void threeDButtonActionPerformed(ActionEvent e)
-{
-    if(twoDon)
-    {
-    try
-    {
-        Content.remove(twoDpanel);
-    }
-    catch(Exception nopanel)
-    {}
-    Content.add(wwd, BorderLayout.CENTER);
-    twoDon = false;
-    statusDisplay.setText("3D View");
-    }
-}
-public void stepDisplayActionPerformed(ActionEvent e)
-{
-    //Assume it worked
-    boolean successStep = true;
-    double tempStep = animationSimStepSeconds;
-    try
-    {
-        String text = stepDisplay.getText();
-        tempStep = Double.parseDouble(text); 
-    }
-    catch(Exception oops)
-    {
-        successStep = false;
-        statusDisplay.setText("Improper step size");
-    }
-    if(successStep)
-    {
-        animationSimStepSeconds = tempStep;
-        statusDisplay.setText("Step Size Changed");
-    }
-}
-
-public double getCurrentJulianTime()
-{
-    return this.getCurrentJulTime();
-}
-public void WWsetMJD(double mjd)
-    {
-               
-        if(viewModeECI)
-        {
-//            // Hmm need to do something to keep the ECI view moving even after user interaction
-//            // seems to work after you click off globe after messing with it
-//            // this fixes the problem:
-            //NEED TO GET THE STOP STATE ITERATOR WORKING!
-//              wwd.getView().stopStateIterators();
-            wwd.getView().stopMovement(); //seems to fix prop in v0.5 
-//            // update rotation of view and Stars
-            double theta0 = eciLayer.getRotateECIdeg();
-//
-            // UPDATE TIME
-            eciLayer.setCurrentMJD(mjd);
-//
-            double thetaf = eciLayer.getRotateECIdeg(); // degrees
-//
-//            // move view
-//
-//            //Quaternion q0 = ((BasicOrbitView) wwd.getView()).getRotation();
-//            //Vec4 vec = ((BasicOrbitView) wwd.getView()).getEyePoint();
-//            
-//            //Position pos = ((BasicOrbitView) wwd.getView()).getCurrentEyePosition();
-            Position pos = ((BasicOrbitView) wwd.getView()).getCenterPosition(); // WORKS
-//            
-//            // amount to rotate the globe (degrees) around poles axis
-            double rotateEarthDelta = thetaf - theta0; // deg
-//
-//            //Quaternion q = Quaternion.fromRotationYPR(Angle.fromDegrees(0), Angle.fromDegrees(rotateEarthDelta), Angle.fromDegrees(0.0));
-//            // rotate the earth around z axis by rotateEarthDelta
-//            //double[][] rz = MathUtils.R_z(rotateEarthDelta*Math.PI/180);
-//            //double[] newEyePos = MathUtils.mult(rz, new double[] {vec.x,vec.y,vec.z});
-////            Angle newLon = pos.getLongitude().addDegrees(-rotateEarthDelta);
-////            Position newPos = new Position(pos.getLatitude(),newLon,pos.getElevation());
-//            
-//            //Position newPos = pos.add(new Position(Angle.fromDegrees(0),Angle.fromDegrees(-rotateEarthDelta),0.0));
-            Position newPos = pos.add(new Position(Angle.fromDegrees(0),Angle.fromDegrees(-rotateEarthDelta),0.0)); // WORKS
-//            
-//            // rotation in 3D space is "added" to the quaternion by quaternion multiplication
-////            try // try around it to prevent problems when running the simulation and then opening a new 3D window (this is called before the wwj is initalized)
-////            {
-//                //((BasicOrbitView) wwd.getView()).setRotation(q0.multiply(q));
-//            // BUG -- ALWATS REORIENTS VIEW TO NORTH UP AND NO TILT!  -- fixed 15  Jul 2008 SEG
-//                //((BasicOrbitView) wwd.getView()).setEyePosition(newPos);
-               ((BasicOrbitView) wwd.getView()).setCenterPosition(newPos); // WORKS  -- fixed 15  Jul 2008 SEG
-////            }
-////            catch(Exception e)
-////            {
-////                // do nothing, it will catch up next update
-////            }
-//
-            // star layer
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
-//            
-        } // if ECI
-        else
-        {
-            // EFEC - just update time
-            eciLayer.setCurrentMJD(mjd);
+            //Add the view controls layer
+            viewControlsLayer = new ViewControlsLayer();
+            viewControlsLayer.setLayout(AVKey.VERTICAL); // VOTD change from LAYOUT_VERTICAL (9/june/09)
+            viewControlsLayer.setScale(6/10d);
+            viewControlsLayer.setPosition(AVKey.SOUTHEAST); // put it on the right side
+            viewControlsLayer.setLocationOffset( new Vec4(15,35,0,0));
+            viewControlsLayer.setEnabled(true); // turn off by default
+            viewControlsLayer.setShowVeControls(false); //Turn off useless buttons
+            m.getLayers().add(1,viewControlsLayer);
+            wwd.addSelectListener(new ViewControlsSelectListener(wwd, viewControlsLayer));
             
-            // star layer
-            starsLayer.setLongitudeOffset(Angle.fromDegrees(-eciLayer.getRotateECIdeg()));
-        }
-        
-        // debug - reset view to follow sat
-        //setViewCenter(15000000); // set this only if user has picked a satellite to follow!
+            // add ECI Layer -- FOR SOME REASON IF BEFORE EFEF and turned off ECEF Orbits don't show up!! Coverage effecting this too, strange
+            eciLayer = new ECIRenderableLayer(currentJulianDate.getMJD()); // create ECI layer
+            orbitModel = new OrbitModelRenderable(satHash, wwd.getModel().getGlobe());
+            eciLayer.addRenderable(orbitModel); // add renderable object
+            eciLayer.setCurrentMJD(currentJulianDate.getMJD()); // update time again after adding renderable
+            eciRadialGrid.setShowGrid(false); //turn off grid
+            eciLayer.addRenderable(eciRadialGrid); // add grid (optional if it is on or not)
+            m.getLayers().add(0,eciLayer); // add ECI Layer
+            
+            // add ECEF Layer
+            ecefLayer = new ECEFRenderableLayer(); // create ECEF layer
+            ecefModel = new ECEFModelRenderable(satHash, wwd.getModel().getGlobe());
+            ecefLayer.addRenderable(ecefModel); // add renderable object
+            ecefLayer.setEnabled(false); //Default ECI not ECEF
+            m.getLayers().add(ecefLayer); // add ECEF Layer
+            
+            // add EcefTimeDepRenderableLayer layer
+            timeDepLayer = new EcefTimeDepRenderableLayer(currentJulianDate.getMJD(),sun);
+            m.getLayers().add(timeDepLayer);
+            
+            // Add the status bar
+            StatusBar statusBar = new StatusBar();
+            this.getContentPane().add(statusBar, BorderLayout.PAGE_END);
 
-        // update layer that needs time updates
-        timeDepLayer.setCurrentMJD(mjd);
-        
-    } // set MJD
+            // Forward events to the status bar to provide the cursor position info.
+            statusBar.setEventSource(this.wwd);
 
- public J2DEarthPanel createNew2dWindow()
-    {
-        
-        // create 2D Earth Panel:
-        //J2DEarthPanel newPanel = new J2DEarthPanel(satHash);
-        J2DEarthPanel newPanel = new J2DEarthPanel(satHash, currentJulianDate, sun);
-
-        String windowName = "2D Earth Window";
-        newPanel.setName(windowName);
-        return newPanel;
+            // Setup a select listener for the worldmap click-and-go feature
+            this.wwd.addSelectListener(new ClickAndGoSelectListener(this.wwd, WorldMapLayer.class));
+            
+             for (Layer layer : m.getLayers())
+            {
+            if (layer instanceof LandsatI3)
+            {
+                ((TiledImageLayer) layer).setDrawBoundingVolumes(false);
+                ((TiledImageLayer) layer).setEnabled(false);
+            }
+            if (layer instanceof CompassLayer)
+            {
+                ((CompassLayer) layer).setShowTilt(true);
+                ((CompassLayer) layer).setEnabled(true);
+            }
+            if (layer instanceof PlaceNameLayer)
+            {
+                ((PlaceNameLayer) layer).setEnabled(false); // off
+            }
+            if (layer instanceof WorldMapLayer)
+            {
+                ((WorldMapLayer) layer).setEnabled(false); // off
+            }
+            if (layer instanceof USGSUrbanAreaOrtho)
+            {
+                ((USGSUrbanAreaOrtho) layer).setEnabled(false); // off
+            }
+            // save star layer
+            if (layer instanceof StarsLayer)
+            {
+                starsLayer = (StarsLayer) layer;
+                
+                // for now just enlarge radius by a factor of 10
+                starsLayer.setRadius(starsLayer.getRadius()*10.0);
+            }
+            if(layer instanceof CountryBoundariesLayer)
+            {
+                ((CountryBoundariesLayer) layer).setEnabled(false); // off by default
+            }
+            } // for layers
     }
-}
+    
+    //Adds user inputs to scenario, including satellites as well as scenario time if needed
+    public void inputSatellites()
+    {
+            //Read satellites
+            try{
+
+            input = new OnlineInput("http://localhost:8080/parameters_test.html");
+            int n = input.getSize();
+
+            for (int i = 0; i <n; i++)
+            {
+                addCustomSat(input.getSatelliteName(i)); //Add each satellite
+            }
+            reader = new StkEphemerisReader(); //initialize ephemeris reader
+            double tempTime;
+            double maxTempTime = 0;
+            double date = this.getCurrentJulTime();
+            double currentMJDtime = date - AstroConst.JDminusMJD;
+            double deltaTT2UTC = Time.deltaT(currentMJDtime); // = TT - UTC
+            for (int i = 0; i <n; i++)
+            {	//For each satellite
+                    AbstractSatellite S = satHash.get(input.getSatelliteName(i));
+                    S.setGroundTrackIni2False(); 
+                    S.setPlot2DFootPrint(false); //No footprints (ugly)
+                    S.setShow3DFootprint(false);
+                    //Set color
+                    if (input.getColor(i).startsWith("b"))
+                    {
+                            S.setSatColor(Color.BLUE);
+                    }
+                    else if (input.getColor(i).startsWith("g"))
+                    {
+                            S.setSatColor(Color.GREEN);
+                    }
+                    else if (input.getColor(i).startsWith("r"))
+                    {
+                            S.setSatColor(Color.RED);
+                    }
+                    else if (input.getColor(i).startsWith("y"))
+                    {
+                            S.setSatColor(Color.YELLOW);
+                    }
+                    else if (input.getColor(i).startsWith("w"))
+                    {
+                            S.setSatColor(Color.WHITE);
+                    }
+                    else if (input.getColor(i).startsWith("p"))
+                    {
+                            S.setSatColor(Color.PINK);
+                    }
+                    else if (input.getColor(i).startsWith("o"))
+                    {
+                            S.setSatColor(Color.ORANGE);
+                    }
+                    else
+                    {
+                            S.setSatColor(Color.MAGENTA);
+                    }
+                    vector = reader.readStkEphemeris(input.getEphemerisLocation(i)); //Read ephemeris into vector
+                    tempTime = StkEphemerisReader.convertScenarioTimeString2JulianDate(reader.getScenarioEpoch() + " UTC"); //Save ephemeris time
+                    if(!overrideTime || ignoreOverride) //If not override time, then time needs to be updated
+                    {
+                        if(tempTime < time) //If earlier ephemeris time
+                        {
+                            time = tempTime; //Set time to earlier time
+                        }
+                    }
+                    tempTime = vector.get(vector.size()-1).state[0] - deltaTT2UTC;
+                    if(tempTime > maxTempTime) //If this ephemeris time is greater than others
+                    {
+                        maxTempTime = tempTime; //Set as max ephemeris time
+                    }
+                    S.setEphemeris(vector); //set ephemeris for each satellite
+                   // Set default 3d model and turn on the use of 3d models: CURRENTLY UNAVAILABLE
+                   // S.setThreeDModelPath("globalstar/Globalstar.3ds");
+                   // S.setUse3dModel(true);
+                    if (input.getModelCentered(i)) //BAD
+                    {
+                           //statusDisplay.setText("Can't do that yet!");
+                    }
+                    else
+                    {
+                            //dont do anything!
+                    }
+            }
+            double scenarioTime = input.getTime(); //Get user input time
+            if(scenarioTime>=time && scenarioTime < maxTempTime|| overrideTime) //If user input time is greater than time in ephemeris
+            {
+            time = scenarioTime; //Set time to user input time
+                if(!overrideTime || ignoreOverride) //If time needs to be updated
+                {
+                setTime(time);
+                canBePlayed = true;
+                }
+            //step one second forward than go back to original time...fixes dissapearance? 
+            double temp = currentJulianDate.getJulianDate();
+            currentJulianDate.addSeconds(1.0);
+            updateTime();
+            GregorianCalendar gc = Time.convertJD2Calendar(temp);
+            setTime(gc.getTimeInMillis());
+            statusDisplay.setText("Satellites Added");
+            inputSat = true;
+            ignoreOverride = false;
+            }
+            else if(scenarioTime == 0.0) //Means user input read a bad time string
+            {
+                statusDisplay.setText("Incorrect time requested");
+                inputSat = false; //No satellites added
+                if(!overrideTime || ignoreOverride) //If time needs to be changed
+                {
+                currentJulianDate.update2CurrentTime(); //Set to current time
+                setTime(currentJulianDate.getJulianDate());
+                }
+                canBePlayed = false;
+                ignoreOverride = true;
+                try //Remove satellites that were added: don't display satellites if time is bad!
+                {satHash.clear();}
+                catch(Exception e)
+                {}
+            }
+            else
+            {//Outside ephemeris time
+                statusDisplay.setText("Requested time not within ephemeris range");
+                if(!overrideTime || ignoreOverride) //If time needs to be updated
+                {
+                time = scenarioTime; //Set time to requested time
+                setTime(time);
+                }
+                inputSat = false; //No satellites
+                canBePlayed = false;
+                ignoreOverride = true;
+            }
+            }
+            catch(Exception e) //URL given in input does not connect to STK ephemeris file
+            {statusDisplay.setText("No satellites found");
+            inputSat = false; //No satellites
+            if(!overrideTime || ignoreOverride) //If time needs to be updated
+            {
+            currentJulianDate.update2CurrentTime(); //Set to current time
+            setTime(currentJulianDate.getJulianDate());
+            }
+            canBePlayed = false;
+            ignoreOverride = true;}
+    }
+} //End of program
+

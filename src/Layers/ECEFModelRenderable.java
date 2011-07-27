@@ -21,14 +21,11 @@
 package Layers;
 
 import gov.nasa.worldwind.geom.Angle;
-import gov.nasa.worldwind.geom.Position;
 import gov.nasa.worldwind.geom.Vec4;
 import gov.nasa.worldwind.globes.Globe;
 import gov.nasa.worldwind.render.AnnotationAttributes;
 import gov.nasa.worldwind.render.DrawContext;
 import gov.nasa.worldwind.render.FrameFactory;
-import gov.nasa.worldwind.render.GlobeAnnotation;
-import gov.nasa.worldwind.render.MultiLineTextRenderer;
 import gov.nasa.worldwind.render.Renderable;
 import gov.nasa.worldwind.util.Logging;
 import java.awt.Color;
@@ -76,6 +73,7 @@ public class ECEFModelRenderable implements Renderable
      }
     
     
+    @Override
     public void render(DrawContext dc)
     {
         if (dc == null)

@@ -197,6 +197,7 @@ public final class SphereObject implements Extent, Renderable
      *
      * @return the radius of this sphere
      */
+    @Override
     public final double getRadius()
     {
         return this.radius;
@@ -217,6 +218,7 @@ public final class SphereObject implements Extent, Renderable
      *
      * @return the diameter of this <code>Sphere</code>
      */
+    @Override
     public final double getDiameter()
     {
         return 2 * this.radius;
@@ -227,6 +229,7 @@ public final class SphereObject implements Extent, Renderable
      *
      * @return the <code>Vec4</code> situated at the center of this <code>Sphere</code>
      */
+    @Override
     public final Vec4 getCenter()
     {
         return this.center;
@@ -241,6 +244,7 @@ public final class SphereObject implements Extent, Renderable
      * @return an array containing all the intersections of this <code>Sphere</code> and <code>line</code>
      * @throws IllegalArgumentException if <code>line</code> is null
      */
+    @Override
     public final Intersection[] intersect(Line line)
     {
         if (line == null)
@@ -296,6 +300,7 @@ public final class SphereObject implements Extent, Renderable
      *         false otherwise.
      * @throws IllegalArgumentException if <code>frustum</code> is null
      */
+    @Override
     public boolean intersects(Frustum frustum)
     {
        if (frustum == null)
@@ -315,6 +320,7 @@ public final class SphereObject implements Extent, Renderable
      * @return true if <code>line</code> intersects or makes a tangent with the surface of this <code>Sphere</code>
      * @throws IllegalArgumentException if <code>line</code> is null
      */
+    @Override
     public boolean intersects(Line line)
     {
         if (line == null)
@@ -333,6 +339,7 @@ public final class SphereObject implements Extent, Renderable
      * @return true if <code>plane</code> intersects or makes a tangent with the surface of this <code>Sphere</code>
      * @throws IllegalArgumentException if <code>plane</code> is null
      */
+    @Override
     public boolean intersects(Plane plane)
     {
         if (plane == null)
@@ -353,6 +360,7 @@ public final class SphereObject implements Extent, Renderable
      * @param dc the <code>DrawContext</code> to be used
      * @throws IllegalArgumentException if <code>dc</code> is null
      */
+    @Override
     public void render(DrawContext dc)
     {
         if (dc == null)

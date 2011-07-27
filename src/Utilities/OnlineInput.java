@@ -1,26 +1,32 @@
 package Utilities;
 
+//Class created to read a file containing user inputs
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.net.URL;
 import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
 
 public class OnlineInput
 {
-    private String[] SatelliteName;
-    private String[] EphemerisLocation;
-    private String[] Co;
-    private boolean[] ModelCentered;
+    private String[] SatelliteName; //Array of satellite names
+    private String[] EphemerisLocation; //Arrary  of links to ephemeris files
+    private String[] Co; //Array of color strings
+    private boolean[] ModelCentered; //Array for model centered view booleans
+    private String scenariotime; //Scenario time input
     BufferedReader input;
 	public OnlineInput(String path) throws IOException
 	{	
-		UpdateInput(path);
+		UpdateInput(path); //Call the read file method
 	}
         private void UpdateInput(String file) throws IOException
 	{ //reads a file - updates user input
 
         try {
-		URL url = new URL(file);
+		URL url = new URL(file); //open URL file stream
 		InputStream in = url.openStream();
 		input = new BufferedReader(new InputStreamReader(in));
         } catch (FileNotFoundException ex) {
@@ -34,22 +40,28 @@ public class OnlineInput
 		//read lines - assign to a single string- parse later into the arrays
 		while ((line = input.readLine()) != null)
 		{
-			if (line.startsWith("satellitename"))
+			if (line.startsWith("satellitename")) //Satellite name input
 			{
 				SatelliteNameLong = line.substring(14).trim();
 			}
-			else if (line.startsWith("ephemerislocation"))
+			else if (line.startsWith("ephemerislocation")) //Ephemeris location input
 			{
 				EphemerisLocationLong = line.substring(18).trim();
 			}
-			else if (line.startsWith("get2Dsatcolor"))
+			else if (line.startsWith("get2Dsatcolor")) //Color input
 			{
 				ColorLong = line.substring(14).trim();
+                                if("".equals(ColorLong))
+                                {ColorLong = "null;";}
 			}
-			else if (line.startsWith("viewobject"))
+			else if (line.startsWith("viewobject")) //View object
 			{
 				ModelCenteredLong = line.substring(11).trim();
 			}
+                        else if (line.startsWith("scenariotime")) //Scenario time
+                        {
+                                scenariotime = line.substring(13);
+                        }
 		}
 		//seperate long strings into smaller arrays
 		SatelliteName = SatelliteNameLong.split(";");
@@ -80,7 +92,7 @@ public class OnlineInput
 	}
 	public String getColor(int location)
 	{ //returns satellite color
-		return Co[location];
+                return Co[location];
 	}
 	public boolean getModelCentered(int location)
 	{ //returns if 3D view should be model centered or not
@@ -106,4 +118,46 @@ public class OnlineInput
 	{ //number of satellites
 		return SatelliteName.length;
 	}
+        public double getTime()
+        {
+            try
+            {
+            return convertScenarioTimeString2JulianDate(scenariotime+" UTC");
+            }
+            catch(Exception e)
+            {return 0.0;}
+        }
+        public static double convertScenarioTimeString2JulianDate(String scenarioTimeStr) throws Exception
+        {
+        GregorianCalendar currentTimeDate = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+
+        SimpleDateFormat dateformatShort1 = new SimpleDateFormat("dd MMM y H:m:s.S z");
+        SimpleDateFormat dateformatShort2 = new SimpleDateFormat("dd MMM y H:m:s z"); // no Milliseconds
+
+        try
+        {
+            currentTimeDate.setTime( dateformatShort1.parse(scenarioTimeStr) );
+        }
+        catch(Exception e2)
+        {
+            try
+            {
+                // try reading without the milliseconds
+                currentTimeDate.setTime( dateformatShort2.parse(scenarioTimeStr) );
+            }
+            catch(Exception e3)
+            {
+                // bad date input
+                throw new Exception("Scenario Date/Time format incorrect" + scenarioTimeStr);
+            } // catch 2
+
+        } // catch 1
+
+        // if we get here the date was accepted
+        Time t = new Time();
+        t.set(currentTimeDate.getTimeInMillis());
+
+        return t.getJulianDate();
+        
+    } // convertScenarioTimeString2JulianDate
 }
