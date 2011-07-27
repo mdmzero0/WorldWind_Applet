@@ -44,9 +44,7 @@ import javax.swing.Timer;
 import TwoDImage.J2DEarthPanel;
 import View.*;
 import gov.nasa.worldwind.awt.AWTInputHandler;
-import java.util.Random;
 
-import java.lang.Math;
 /**
  * Illustrates the how to display a World Wind <code>{@link WorldWindow}</code> in a Java Applet and interact with the
  * WorldWindow through JavaScript code running in the browser. This class extends <code>{@link JApplet}</code> and
@@ -221,7 +219,7 @@ public class WWJApplet extends JApplet
             toolbar = new JToolBar();
             Content.add(toolbar, BorderLayout.PAGE_START);
             
-            //Add the play button
+            //Add the canBePlayed button
             playScenario = new JButton("Play");
             playScenario.addActionListener((new java.awt.event.ActionListener() {
                 @Override
@@ -654,7 +652,8 @@ public class WWJApplet extends JApplet
         // If time jumps by more than 91 minutes check period of sat to see if
         // ground tracks need to be updated.  Ground Tracks currently not shown in Applet
         double timeDiffDays = Math.abs(currentJulianDate.getJulianDate()-prevJulDate); // in days
-        checkTimeDiffResetGroundTracks(timeDiffDays);        
+        checkTimeDiffResetGroundTracks(timeDiffDays);
+
                 
         // Update Date Box:
         dateDisplay.setText( currentJulianDate.getDateTimeStr() );//String.format("%tc",cal) );
@@ -1032,7 +1031,7 @@ private void eUpdateActionPerformed(ActionEvent e)
     {update = false;}
     else //If automatic update is off, set on when clicked
     {update = true;}
-    eTimer = new Timer(6000, new ActionListener() //create update timer
+    eTimer = new Timer(6000, new ActionListener() //create update timer //FIRST NUMBER IS UPDATE INTERVAL IN MILISECONDS!
             {
             @Override
                 public void actionPerformed(ActionEvent event)
@@ -1098,7 +1097,7 @@ private void animateApplet(boolean b) {
         if (b && inputSat) //If animate and there are satellites
         {
         statusDisplay.setText("Scenario Running");
-        //Hard Coded play scenario
+        //Hard Coded canBePlayed scenario
         double date = this.getCurrentJulTime();
         double currentMJDtime = date - AstroConst.JDminusMJD;
         double deltaTT2UTC = Time.deltaT(currentMJDtime); // = TT - UTC
@@ -1141,7 +1140,6 @@ private void animateApplet(boolean b) {
                          setTime(currentJulianDate.getJulianDate());
                                           }
                                }
-                     
                     // take one time step in the animation
                     currentPlayDirection = 1;
                     updateTime(); // animate
@@ -1452,7 +1450,7 @@ public void WWsetMJD(double mjd)
             //Read satellites
             try{
 
-            input = new OnlineInput("http://localhost:8080/testsea.html");
+            input = new OnlineInput("http://localhost:8080/parameters_test.html");
             int n = input.getSize();
 
             for (int i = 0; i <n; i++)
