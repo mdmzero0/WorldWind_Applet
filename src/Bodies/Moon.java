@@ -23,7 +23,6 @@
 package Bodies;
 
 import Utilities.AstroConst;
-import Utilities.Kepler;
 import Utilities.MathUtils;
 
 /**

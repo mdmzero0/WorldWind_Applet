@@ -70,6 +70,7 @@ public class KeyPollTimer implements java.awt.event.KeyListener
 
         WorldWind.addPropertyChangeListener(WorldWind.SHUTDOWN_EVENT, new PropertyChangeListener()
         {
+            @Override
             public void propertyChange(PropertyChangeEvent propertyChangeEvent)
             {
                 KeyPollTimer.this.timer.cancel();
@@ -83,10 +84,12 @@ public class KeyPollTimer implements java.awt.event.KeyListener
         return this.timerTask != null;
     }
 
+    @Override
     public void keyTyped(java.awt.event.KeyEvent e)
     {
     }
 
+    @Override
     public void keyPressed(java.awt.event.KeyEvent e)
     {
         if (e == null)
@@ -99,6 +102,7 @@ public class KeyPollTimer implements java.awt.event.KeyListener
         }
     }
 
+    @Override
     public void keyReleased(java.awt.event.KeyEvent e)
     {
         if (e == null)
@@ -134,6 +138,7 @@ public class KeyPollTimer implements java.awt.event.KeyListener
         {
             this.timerTask = new java.util.TimerTask()
             {
+                @Override
                 public void run()
                 {
                     long time = System.currentTimeMillis();

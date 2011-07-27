@@ -188,4 +188,6 @@ public abstract class AbstractSatellite implements Serializable
     public abstract void setEphemeris(Vector<StateVector> e);
     
     public abstract Vector<StateVector> getEphemeris();
+    
+    public abstract boolean isDisplayed();
 }

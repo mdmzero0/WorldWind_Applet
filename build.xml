@@ -10,19 +10,6 @@
 <project name="wwapp" default="default" basedir=".">
     <description>Builds, tests, and runs the project wwapp.</description>
     <import file="nbproject/build-impl.xml"/>
-    <target name="-post-jar">
-    <exec executable="${jarsign.jarsigner}">
-      <arg line="-keystore" />
-      <arg file="${jarsign.keystore}" />
-      <arg line="-storepass ${jarsign.storepass}" />
-      <arg line="-keypass ${jarsign.keypass}" />
-      <arg line="-signedjar" />
-      <arg file="${jarsign.signedjar}" />
-      <arg file="${dist.jar}"/>
-      <arg line="${jarsign.alias}" />
-   </exec>
-   <echo>Signed Jar '${jarsign.signedjar}' created</echo>
- </target>
     <!--
 
     There exist several targets which are by default empty and which can be 

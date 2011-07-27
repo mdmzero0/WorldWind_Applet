@@ -33,7 +33,6 @@ import gov.nasa.worldwind.render.AnnotationAttributes;
 import gov.nasa.worldwind.render.DrawContext;
 import gov.nasa.worldwind.render.FrameFactory;
 import gov.nasa.worldwind.render.GlobeAnnotation;
-import gov.nasa.worldwind.render.MultiLineTextRenderer;
 import gov.nasa.worldwind.render.Renderable;
 import gov.nasa.worldwind.util.Logging;
 import java.awt.Color;
