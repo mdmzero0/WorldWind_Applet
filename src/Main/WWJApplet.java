@@ -44,9 +44,7 @@ import javax.swing.Timer;
 import TwoDImage.J2DEarthPanel;
 import View.*;
 import gov.nasa.worldwind.awt.AWTInputHandler;
-import java.util.Random;
 
-import java.lang.Math;
 /**
  * Illustrates the how to display a World Wind <code>{@link WorldWindow}</code> in a Java Applet and interact with the
  * WorldWindow through JavaScript code running in the browser. This class extends <code>{@link JApplet}</code> and
