@@ -64,7 +64,7 @@ public class OnlineInput
                         }
 		}
 		//seperate long strings into smaller arrays
-		SatelliteName = SatelliteNameLong.split(";");
+		SatelliteName = SatelliteNameLong.split(";");                
 		EphemerisLocation = EphemerisLocationLong.split(";");
 		String[] ModelCenteredArray = ModelCenteredLong.split(";");
                 ModelCentered = new boolean [ModelCenteredArray.length];
@@ -74,6 +74,14 @@ public class OnlineInput
 			ModelCentered[i] = Boolean.parseBoolean(ModelCenteredArray[i]);
 		}
 		Co = ColorLong.split(";");
+                
+                //If there are more ephemeris files than satellite names, set names to unknown
+                while(EphemerisLocation.length > SatelliteName.length)
+                {
+                    System.out.println("Found unknown");
+                    SatelliteName[SatelliteName.length] = "Unknown";
+                    System.out.println("Added unknown");
+                }
 	}
 	public void removeSatellite(int location)
 	{ //remove satellite from list
