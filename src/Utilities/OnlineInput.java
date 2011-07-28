@@ -77,16 +77,18 @@ public class OnlineInput
 		Co = ColorLong.split(";");
                 
                 //If there are more ephemeris files than satellite names, set names to unknown
-                SatelliteName = new String[EphemerisLocation.length];
+                SatelliteName = new String[EphemerisLocation.length]; //Set arrray to same length as ephemeris
+                int n = 1; //For Unknown satellite names
                 for(int i = 0; i < EphemerisLocation.length; i++)
                 {
-                    if(i < TempSatelliteName.length)
+                    if(i < TempSatelliteName.length) //Set satellite name to the name read in the file, if available
                     {
                         SatelliteName[i] = TempSatelliteName[i];
                     }
-                    else
+                    else //Set to Unknown + number
                     {
-                        SatelliteName[i] = "Unknown";
+                        SatelliteName[i] = "Unknown " +n;
+                        n++;
                     }
                 }
 	}
