@@ -1530,7 +1530,7 @@ public void WWsetMJD(double mjd)
                     }
             }
             double scenarioTime = input.getTime(); //Get user input time
-            if(scenarioTime>=time && scenarioTime < maxTempTime|| overrideTime) //If user input time is greater than time in ephemeris
+            if((((scenarioTime>=time) && (scenarioTime < maxTempTime)) && !ignoreOverride) || (overrideTime && !ignoreOverride)) //If user input time is greater than time in ephemeris
             {
             time = scenarioTime; //Set time to user input time
                 if(!overrideTime || ignoreOverride) //If time needs to be updated
@@ -1559,6 +1559,7 @@ public void WWsetMJD(double mjd)
                 }
                 canBePlayed = false;
                 ignoreOverride = true;
+                overrideTime = false;
                 try //Remove satellites that were added: don't display satellites if time is bad!
                 {satHash.clear();}
                 catch(Exception e)
@@ -1575,6 +1576,7 @@ public void WWsetMJD(double mjd)
                 inputSat = false; //No satellites
                 canBePlayed = false;
                 ignoreOverride = true;
+                overrideTime = false;
             }
             }
             catch(Exception e) //URL given in input does not connect to STK ephemeris file
