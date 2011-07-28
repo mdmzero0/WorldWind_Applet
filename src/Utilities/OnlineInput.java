@@ -13,6 +13,7 @@ import java.util.TimeZone;
 public class OnlineInput
 {
     private String[] SatelliteName; //Array of satellite names
+    private String[] TempSatelliteName; //Temporary array - read off input file
     private String[] EphemerisLocation; //Arrary  of links to ephemeris files
     private String[] Co; //Array of color strings
     private boolean[] ModelCentered; //Array for model centered view booleans
@@ -64,7 +65,7 @@ public class OnlineInput
                         }
 		}
 		//seperate long strings into smaller arrays
-		SatelliteName = SatelliteNameLong.split(";");                
+		TempSatelliteName = SatelliteNameLong.split(";");                
 		EphemerisLocation = EphemerisLocationLong.split(";");
 		String[] ModelCenteredArray = ModelCenteredLong.split(";");
                 ModelCentered = new boolean [ModelCenteredArray.length];
@@ -76,11 +77,17 @@ public class OnlineInput
 		Co = ColorLong.split(";");
                 
                 //If there are more ephemeris files than satellite names, set names to unknown
-                while(EphemerisLocation.length > SatelliteName.length)
+                SatelliteName = new String[EphemerisLocation.length];
+                for(int i = 0; i < EphemerisLocation.length; i++)
                 {
-                    System.out.println("Found unknown");
-                    SatelliteName[SatelliteName.length] = "Unknown";
-                    System.out.println("Added unknown");
+                    if(i < TempSatelliteName.length)
+                    {
+                        SatelliteName[i] = TempSatelliteName[i];
+                    }
+                    else
+                    {
+                        SatelliteName[i] = "Unknown";
+                    }
                 }
 	}
 	public void removeSatellite(int location)
