@@ -1036,7 +1036,7 @@ private void eUpdateActionPerformed(ActionEvent e)
             @Override
                 public void actionPerformed(ActionEvent event)
                 {
-                    overrideTime = true; //Do not change time when re-reading input file
+//                    overrideTime = true; //Do not change time when re-reading input file
                     if(update)
                     { //Update scenario
                     updating = true; //Do not repaint during this time 
@@ -1530,7 +1530,7 @@ public void WWsetMJD(double mjd)
                     }
             }
             double scenarioTime = input.getTime(); //Get user input time
-            if((((scenarioTime>=time) && (scenarioTime < maxTempTime)) && !ignoreOverride) || (overrideTime && !ignoreOverride)) //If user input time is greater than time in ephemeris
+            if((scenarioTime>=time) && (scenarioTime < maxTempTime)) //If user input time is greater than time in ephemeris
             {
             time = scenarioTime; //Set time to user input time
                 if(!overrideTime || ignoreOverride) //If time needs to be updated
@@ -1547,6 +1547,7 @@ public void WWsetMJD(double mjd)
             statusDisplay.setText("Satellites Added");
             inputSat = true;
             ignoreOverride = false;
+            overrideTime = true;
             }
             else if(scenarioTime == 0.0) //Means user input read a bad time string
             {
@@ -1570,8 +1571,7 @@ public void WWsetMJD(double mjd)
                 statusDisplay.setText("Requested time not within ephemeris range");
                 if(!overrideTime || ignoreOverride) //If time needs to be updated
                 {
-                time = scenarioTime; //Set time to requested time
-                setTime(time);
+                setTime(scenarioTime);
                 }
                 inputSat = false; //No satellites
                 canBePlayed = false;
